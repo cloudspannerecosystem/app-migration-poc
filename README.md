@@ -4,9 +4,12 @@
 
 *Description*
 
-> **🧪 Preview:** Any notes about stability or launch stage.
+> **POC: App Migration to Spanner using Generative AI and RAG:** This repository contains a proof of concept (POC) project focused on streamlining the migration of applications to Google Cloud Spanner. By leveraging the power of Generative AI and Retrieval-Augmented Generation (RAG), this project aims to reduce customer friction and enhance the overall migration experience.
 
-## Features
+## Scope
+1. Automate Migration Tasks: Use AI to handle repetitive and time-consuming tasks, increasing efficiency and accuracy.
+1. Contextual Assistance: Provide real-time, relevant information and suggestions to users during the migration process.
+1. Enhance User Experience: Offer a user-friendly interface and clear guidance to reduce the learning curve and stress associated with migration.
 
 ## Getting Started
 
