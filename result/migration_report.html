@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cloud Spanner Migration Report</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .code {
+      font-family: monospace;
+      background-color: #eee;
+      padding: 5px;
+      border-radius: 3px;
+    }
+    .code-highlight {
+      color: #080;
+    }
+    .warning {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Cloud Spanner Migration Report</h1>
+
+<h2>Summary</h2>
+<p>This report details the necessary code changes for migrating a Spring MVC Bookstore application from MySQL JDBC to Cloud Spanner JDBC. The analysis focuses on data type compatibility, SQL query security, and the use of appropriate Cloud Spanner libraries and annotations.</p>
+
+<h2>Classification of Changes and Complexity</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Complexity</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Data Type Mapping</td>
+      <td>Basic Coding Knowledge</td>
+      <td>Updating Java data types to align with Cloud Spanner's data types. This includes using <code>Long</code> for primary keys and <code>String</code> for phone numbers.</td>
+    </tr>
+    <tr>
+      <td>SQL Query Parameterization</td>
+      <td>Basic Coding Knowledge</td>
+      <td>Converting string concatenation in SQL queries to parameterized statements using <code>NamedParameterJdbcTemplate</code> and <code>MapSqlParameterSource</code>. This prevents SQL injection vulnerabilities and improves code readability.</td>
+    </tr>
+    <tr>
+      <td>Cloud Spanner API Usage</td>
+      <td>Intermediate Coding Knowledge</td>
+      <td>Replacing MySQL JDBC specific classes and methods with Cloud Spanner equivalents. This involves using <code>SpannerTemplate</code>, <code>ResultSet</code>, <code>SpannerException</code>, and other Cloud Spanner specific APIs.</td>
+    </tr>
+    <tr>
+      <td>Cloud Spanner Annotations</td>
+      <td>Intermediate Coding Knowledge</td>
+      <td>Adding Cloud Spanner specific annotations like <code>@PrimaryKey</code> and <code>@Column</code> to entity classes for proper mapping and interaction with Cloud Spanner.</td>
+    </tr>
+    <tr>
+      <td>Data Access Object (DAO) Modifications</td>
+      <td>Intermediate to Deep Architectural Experience</td>
+      <td>Updating DAO methods to interact with Cloud Spanner effectively. This might involve changing method signatures, using different query methods, and handling Cloud Spanner specific exceptions.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Detailed Analysis for Each File</h2>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>7</td>
+      <td>7</td>
+      <td><pre class="code">private int id;</pre></td>
+      <td><pre class="code">private Long id;</pre></td>
+      <td>Cloud Spanner primary keys must be of type Long for compatibility with the database.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>12</td>
+      <td><pre class="code">public int getId() {</pre></td>
+      <td><pre class="code">public Long getId() {</pre></td>
+      <td>Updated the return type to Long to match the updated id field type.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>15</td>
+      <td><pre class="code">public void setId(int id) {</pre></td>
+      <td><pre class="code">public void setId(Long id) {</pre></td>
+      <td>Updated the parameter type to Long to match the updated id field type.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/User.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>11</td>
+      <td>11</td>
+      <td><pre class="code">private int phone;</pre></td>
+      <td><pre class="code">private String phone;</pre></td>
+      <td>Cloud Spanner doesn't have an 'INT' data type that maps directly to Java 'int'.<br>
+It's generally recommended to use 'String' to represent phone numbers for flexibility and to avoid potential integer overflow issues. You can always validate and format the phone number at the application level.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>54</td>
+      <td>54</td>
+      <td><pre class="code">public int getPhone() {</pre></td>
+      <td><pre class="code">public String getPhone() {</pre></td>
+      <td>Change return type to match the updated 'phone' field type.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>58</td>
+      <td>58</td>
+      <td><pre class="code">public void setPhone(int phone) {</pre></td>
+      <td><pre class="code">public void setPhone(String phone) {</pre></td>
+      <td>Change parameter type to match the updated 'phone' field type.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Book.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td><pre class="code">private int id;</pre></td>
+      <td><pre class="code">private Long id;</pre></td>
+      <td>Cloud Spanner primary keys must be longs.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>10</td>
+      <td><pre class="code">public int getId() {</pre></td>
+      <td><pre class="code">public Long getId() {</pre></td>
+      <td>Change int to Long for Cloud Spanner compatibility.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>13</td>
+      <td><pre class="code">public void setId(int id) {</pre></td>
+      <td><pre class="code">public void setId(Long id) {</pre></td>
+      <td>Change int to Long for Cloud Spanner compatibility.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Purchase.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>9</td>
+      <td>9</td>
+      <td><pre class="code">private String date_purchased;</pre></td>
+      <td><pre class="code">private Timestamp date_purchased;</pre></td>
+      <td>Cloud Spanner uses Timestamp for storing timestamp values. Changed the type of date_purchased to Timestamp.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>38</td>
+      <td>38</td>
+      <td><pre class="code">public String getDatePurchased() {</pre></td>
+      <td><pre class="code">public Timestamp getDatePurchased() {</pre></td>
+      <td>Changed the return type of getDatePurchased to Timestamp.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>41</td>
+      <td><pre class="code">public void setDatePurchased(String date_purchased) {</pre></td>
+      <td><pre class="code">public void setDatePurchased(Timestamp date_purchased) {</pre></td>
+      <td>Changed the parameter type of setDatePurchased to Timestamp.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td><pre class="code">import com.google.cloud.spanner.annotation.Column;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.annotation.Column;
+import com.google.cloud.spring.data.spanner.core.mapping.PrimaryKey;</pre></td>
+      <td>Import necessary annotation for Cloud Spanner</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td><pre class="code">private int id;</pre></td>
+      <td><pre class="code">    @PrimaryKey
+    @Column(name = "id", spannerType = "INT64")
+    private Long id;</pre></td>
+      <td>Update data type from `int` to `Long` and add annotations for Cloud Spanner Primary key and Column mapping.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>5</td>
+      <td><pre class="code">private float salary;</pre></td>
+      <td><pre class="code">    private Double salary;</pre></td>
+      <td>Cloud Spanner uses `Double` for floating-point numbers. Update from `float` to `Double`.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>8</td>
+      <td><pre class="code">public int getId() {</pre></td>
+      <td><pre class="code">    public Long getId() {</pre></td>
+      <td>Update return type from `int` to `Long` to match updated id field.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>11</td>
+      <td><pre class="code">public void setId(int id) {</pre></td>
+      <td><pre class="code">    public void setId(Long id) {</pre></td>
+      <td>Update parameter type from `int` to `Long` to match the updated id field.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>19</td>
+      <td><pre class="code">public float getSalary() {</pre></td>
+      <td><pre class="code">    public Double getSalary() {</pre></td>
+      <td>Update return type from `float` to `Double` to match updated salary field.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>22</td>
+      <td>22</td>
+      <td><pre class="code">public void setSalary(float salary) {</pre></td>
+      <td><pre class="code">    public void setSalary(Double salary) {</pre></td>
+      <td>Update parameter type from `float` to `Double` to match updated salary field.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/UserDaoImpl.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>25</td>
+      <td>27</td>
+      <td><pre class="code">jdbcTemplate.update(sql, new Object[] { user.getUsername(), user.getPassword(), user.getFirstname(),
+    user.getLastname(), user.getEmail(), user.getAddress(), user.getPhone() });</pre></td>
+      <td><pre class="code">jdbcTemplate.update(sql, new Object[] { user.getUsername(), user.getPassword(), user.getFirstname(),
+    user.getLastname(), user.getEmail(), user.getAddress(), Long.parseLong(user.getPhone()) });</pre></td>
+      <td>Cloud Spanner does not support setting INT64 from a String. Converting the phone number to Long before setting it to the statement.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>32</td>
+      <td>33</td>
+      <td><pre class="code">String sql = "select * from users where username='" + login.getUsername() + "' and password='" + login.getPassword()
+    + "'";</pre></td>
+      <td><pre class="code">String sql = "select * from users where username = ? and password = ?";
+
+    List&lt;User&gt; users = jdbcTemplate.query(sql, new UserMapper(), login.getUsername(), login.getPassword());</pre></td>
+      <td>Modified the query to use parameterized statements instead of string concatenation for security and to align with Cloud Spanner's recommendations.</td>
+      <td><span class="warning">Direct string concatenation for SQL queries is a security vulnerability (SQL injection). Always use parameterized queries.</span></td>
+    </tr>
+    <tr>
+      <td>55</td>
+      <td>55</td>
+      <td><pre class="code">user.setPhone(rs.getInt("phone"));</pre></td>
+      <td><pre class="code">user.setPhone(String.valueOf(rs.getLong("phone")));</pre></td>
+      <td>Cloud Spanner's JDBC driver returns a 'long' for INT64. Updating the 'getPhone' call to get Long and converting to String to match the 'User' object's field type.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td><pre class="code">import java.sql.ResultSet;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.ResultSet;</pre></td>
+      <td>Use Cloud Spanner's ResultSet instead of java.sql.ResultSet.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td><pre class="code">import java.sql.SQLException;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.SpannerException;</pre></td>
+      <td>Use Cloud Spanner's SpannerException instead of java.sql.SQLException.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>4</td>
+      <td><pre class="code">import org.springframework.jdbc.core.BeanPropertyRowMapper;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.jdbc.spring.SpannerTemplate;</pre></td>
+      <td>Use SpannerTemplate for interacting with Cloud Spanner.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>5</td>
+      <td><pre class="code">import org.springframework.jdbc.core.JdbcTemplate;</pre></td>
+      <td><pre class="code">import org.springframework.jdbc.core.RowMapper;</pre></td>
+      <td>Remove unused import.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>9</td>
+      <td><pre class="code">JdbcTemplate template;</pre></td>
+      <td><pre class="code">SpannerTemplate template;</pre></td>
+      <td>Use SpannerTemplate instead of JdbcTemplate.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>11</td>
+      <td><pre class="code">public void setTemplate(JdbcTemplate template) {</pre></td>
+      <td><pre class="code">public void setTemplate(SpannerTemplate template) {</pre></td>
+      <td>Use SpannerTemplate instead of JdbcTemplate.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>15</td>
+      <td><pre class="code">String sql="insert into purchase_detail(name, phone, books, quantity, total_price) values('" + p.getName() + "', '" + p.getPhone() + "', '" + p.getBooks() + "',  " + p.getQuantity() + ", " + p.getTotalPrice() + ")";</pre></td>
+      <td><pre class="code">String sql = "INSERT INTO purchase_detail (name, phone, books, quantity, total_price, date_purchased) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP())";
+        return template.update(sql, p.getName(), p.getPhone(), p.getBooks(), p.getQuantity(), p.getTotalPrice());</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities and set date_purchased to CURRENT_TIMESTAMP().</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>19</td>
+      <td><pre class="code">String sql="update book set name='" + p.getName() + "', phone='" + p.getPhone() + "', books='" + p.getBooks() + "', quantity=" + p.getQuantity() + ", total_price=" + p.getTotalPrice() + " ";</pre></td>
+      <td><pre class="code">String sql = "UPDATE book SET name=?, phone=?, books=?, quantity=?, total_price=? WHERE id=?";
+        return template.update(sql, p.getName(), p.getPhone(), p.getBooks(), p.getQuantity(), p.getTotalPrice(), p.getId());</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities and add a WHERE clause to specify the row to update.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>23</td>
+      <td><pre class="code">String sql="delete from purchase_detail where id=" + id + "";</pre></td>
+      <td><pre class="code">String sql = "DELETE FROM purchase_detail WHERE id=?";
+        return template.update(sql, id);</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>27</td>
+      <td><pre class="code">return template.queryForObject(sql, new Object[]{id}, new BeanPropertyRowMapper&lt;Purchase&gt;(Purchase.class));</pre></td>
+      <td><pre class="code">return template.queryForObject(sql, new Object[]{id}, (rs, rowNum) -&gt; {
+            Purchase purchase = new Purchase();
+            purchase.setId(rs.getLong("id"));
+            purchase.setName(rs.getString("name"));
+            purchase.setPhone(rs.getString("phone"));
+            purchase.setBooks(rs.getString("books"));
+            purchase.setQuantity(rs.getInt("quantity"));
+            purchase.setTotalPrice(rs.getFloat("total_price"));
+            purchase.setDatePurchased(rs.getTimestamp("date_purchased"));
+            return purchase;
+        });</pre></td>
+      <td>Use a lambda expression to map the ResultSet to a Purchase object and retrieve date_purchased as a Timestamp.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>33</td>
+      <td>33</td>
+      <td><pre class="code">public Purchase mapRow(ResultSet rs, int row) throws SQLException {</pre></td>
+      <td><pre class="code">public Purchase mapRow(ResultSet rs, int row) throws SpannerException {</pre></td>
+      <td>Update exception type to SpannerException.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>35</td>
+      <td>35</td>
+      <td><pre class="code">e.setId(rs.getInt(1));</pre></td>
+      <td><pre class="code">e.setId(rs.getLong(1));</pre></td>
+      <td>Use getLong to retrieve Long value for id.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>41</td>
+      <td><pre class="code">e.setDatePurchased(rs.getString(4));</pre></td>
+      <td><pre class="code">e.setDatePurchased(rs.getTimestamp("date_purchased"));</pre></td>
+      <td>Retrieve date_purchased as a Timestamp.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td><pre class="code">import java.sql.ResultSet;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.ResultSet;</pre></td>
+      <td>Use Cloud Spanner's ResultSet instead of java.sql.ResultSet.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+      <td><pre class="code">import java.sql.SQLException;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.SpannerException;</pre></td>
+      <td>Use Cloud Spanner's SpannerException instead of java.sql.SQLException.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>5</td>
+      <td><pre class="code">import org.springframework.jdbc.core.BeanPropertyRowMapper;</pre></td>
+      <td><pre class="code">import com.google.cloud.spring.data.spanner.core.mapping.SpannerData;</pre></td>
+      <td>Replace Spring JDBC's BeanPropertyRowMapper with SpannerData annotation for mapping.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>6</td>
+      <td><pre class="code">import org.springframework.jdbc.core.JdbcTemplate;</pre></td>
+      <td><pre class="code">import org.springframework.beans.factory.annotation.Autowired;
+import com.google.cloud.spanner.jdbc.spring.SpannerTemplate;</pre></td>
+      <td>Replace Spring JDBC's JdbcTemplate with Cloud Spanner's SpannerTemplate.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>7</td>
+      <td><pre class="code">import org.springframework.jdbc.core.RowMapper;</pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.Key;</pre></td>
+      <td>Use Cloud Spanner's Key for identifying rows instead of RowMapper.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>9</td>
+      <td><pre class="code">JdbcTemplate template;</pre></td>
+      <td><pre class="code">@Autowired
+SpannerTemplate template;</pre></td>
+      <td>Use Cloud Spanner's SpannerTemplate and autowire it.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>13</td>
+      <td><pre class="code">public void setTemplate(JdbcTemplate template) {
+        this.template = template;
+    }</pre></td>
+      <td><pre class="code"></pre></td>
+      <td>Remove the setTemplate method as SpannerTemplate is autowired.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>16</td>
+      <td><pre class="code">String sql="insert into feedback(name, phone, email, feedback) values('" + p.getName() + "', '" + p.getPhone() + "', '" + p.getEmail() + "',  '" + p.getFeedback() + "')";    
+\t    return template.update(sql);</pre></td>
+      <td><pre class="code">return template.insert(p);</pre></td>
+      <td>Use SpannerTemplate's insert method for inserting data directly from the object.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>18</td>
+      <td>19</td>
+      <td><pre class="code">String sql="delete from feedback where id=" + id + "";    
+\t    return template.update(sql);</pre></td>
+      <td><pre class="code">template.delete(Feedback.class, Key.of(id));
+\t    return 1;</pre></td>
+      <td>Use SpannerTemplate's delete method with Key.of(id) to delete a specific row.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>21</td>
+      <td>22</td>
+      <td><pre class="code">String sql="select * from feedback where id=?";    
+\t    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper&lt;Feedback&gt;(Feedback.class));</pre></td>
+      <td><pre class="code">return template.findById(Feedback.class, Key.of(id)).get();</pre></td>
+      <td>Use SpannerTemplate's findById method with Key.of(id) to retrieve a specific object.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>24</td>
+      <td>35</td>
+      <td><pre class="code">return template.query("select * from feedback",new RowMapper&lt;Feedback&gt;(){    
+\t        public Feedback mapRow(ResultSet rs, int row) throws SQLException {    
+\t            Feedback e=new Feedback();    
+\t            e.setId(rs.getInt(1));    
+\t            e.setName(rs.getString(2));    
+\t            e.setPhone(rs.getString(3));      
+\t            e.setEmail(rs.getString(4)); 
+\t            e.setFeedback(rs.getString(5));        
+\t            e.setDateCreated(rs.getString(6));
+\t            return e;    
+\t        }    
+\t    });</pre></td>
+      <td><pre class="code">return template.readAll(Feedback.class);</pre></td>
+      <td>Use SpannerTemplate's readAll method to retrieve all objects of type Feedback.</td>
+      <td><span class="warning">Reading all rows from a table can be inefficient for large tables. Consider using SpannerQueryOptions for pagination or filtering if necessary.</span></td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>27</td>
+      <td><pre class="code">e.setId(rs.getInt(1));</pre></td>
+      <td><pre class="code">e.setId(rs.getLong(1));</pre></td>
+      <td>Use rs.getLong to retrieve the Long id value from the ResultSet.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>25</td>
+      <td>25</td>
+      <td><pre class="code">public Feedback mapRow(ResultSet rs, int row) throws SQLException {</pre></td>
+      <td><pre class="code">public Feedback mapRow(ResultSet rs, int row) throws SpannerException {</pre></td>
+      <td>Update the mapRow method to throw SpannerException instead of SQLException.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td><pre class="code">import java.sql.ResultSet;    </pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.ResultSet;</pre></td>
+      <td>Use Cloud Spanner's `ResultSet` for compatibility.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>5</td>
+      <td><pre class="code">import org.springframework.jdbc.core.JdbcTemplate;</pre></td>
+      <td><pre class="code">import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;</pre></td>
+      <td>Use `NamedParameterJdbcTemplate` for parameterized queries, which are preferred for Cloud Spanner.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>8</td>
+      <td><pre class="code">JdbcTemplate template;</pre></td>
+      <td><pre class="code">NamedParameterJdbcTemplate template;</pre></td>
+      <td>Change the type of `template` from `JdbcTemplate` to `NamedParameterJdbcTemplate`.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>10</td>
+      <td><pre class="code">public void setTemplate(JdbcTemplate template) {    </pre></td>
+      <td><pre class="code">public void setTemplate(NamedParameterJdbcTemplate template) {    </pre></td>
+      <td>Update the `setTemplate` method to accept a `NamedParameterJdbcTemplate`.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>14</td>
+      <td><pre class="code">String sql="insert into employee(name, salary, department) values('" + p.getName() + "'," + p.getSalary() + ",'" + p.getdepartment() + "')";    </pre></td>
+      <td><pre class="code">String sql = "INSERT INTO employee(name, salary, department) VALUES (:name, :salary, :department)";
+    Map&lt;String, Object&gt; params = new HashMap&lt;&gt;();
+    params.put("name", p.getName());
+    params.put("salary", p.getSalary());
+    params.put("department", p.getdepartment());</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>15</td>
+      <td><pre class="code">return template.update(sql);    </pre></td>
+      <td><pre class="code">return template.update(sql, params);</pre></td>
+      <td>Use `NamedParameterJdbcTemplate.update` with the SQL query and parameters.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>18</td>
+      <td>18</td>
+      <td><pre class="code">String sql="update employee set name='" + p.getName() + "', salary=" + p.getSalary() + ",department='" + p.getdepartment() + "' where id=" + p.getId() + "\\"";    </pre></td>
+      <td><pre class="code">String sql = "UPDATE employee SET name=:name, salary=:salary, department=:department WHERE id=:id";
+    Map&lt;String, Object&gt; params = new HashMap&lt;&gt;();
+    params.put("name", p.getName());
+    params.put("salary", p.getSalary());
+    params.put("department", p.getdepartment());
+    params.put("id", p.getId());</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>19</td>
+      <td><pre class="code">return template.update(sql);    </pre></td>
+      <td><pre class="code">return template.update(sql, params);</pre></td>
+      <td>Use `NamedParameterJdbcTemplate.update` with the SQL query and parameters.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>22</td>
+      <td>22</td>
+      <td><pre class="code">String sql="delete from employee where id=" + id + "\\"";    </pre></td>
+      <td><pre class="code">String sql = "DELETE FROM employee WHERE id=:id";
+    Map&lt;String, Object&gt; params = new HashMap&lt;&gt;();
+    params.put("id", id);</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>23</td>
+      <td><pre class="code">return template.update(sql);    </pre></td>
+      <td><pre class="code">return template.update(sql, params);</pre></td>
+      <td>Use `NamedParameterJdbcTemplate.update` with the SQL query and parameters.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>26</td>
+      <td>27</td>
+      <td><pre class="code">String sql="select * from employee where id=?";    
+    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper&lt;Emp&gt;(Emp.class));</pre></td>
+      <td><pre class="code">String sql = "SELECT * FROM employee WHERE id=:id";
+    Map&lt;String, Object&gt; params = new HashMap&lt;&gt;();
+    params.put("id", id);
+    return template.queryForObject(sql, params, new BeanPropertyRowMapper&lt;&gt;(Emp.class));</pre></td>
+      <td>Use parameterized query to prevent SQL injection vulnerabilities.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>34</td>
+      <td>34</td>
+      <td><pre class="code">e.setId(rs.getInt(1));</pre></td>
+      <td><pre class="code">e.setId(rs.getLong(1));</pre></td>
+      <td>Cloud Spanner uses `Long` for primary key.</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>36</td>
+      <td>36</td>
+      <td><pre class="code">e.setSalary(rs.getFloat(3));</pre></td>
+      <td><pre class="code">e.setSalary(rs.getDouble(3));</pre></td>
+      <td>Cloud Spanner uses `Double` for floating-point numbers.</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>File Name: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Start Line</th>
+      <th>End Line</th>
+      <th>Code Sample</th>
+      <th>Suggested Change</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+      <td><pre class="code">import java.sql.ResultSet;    </pre></td>
+      <td><pre class="code">import com.google.cloud.spanner.ResultSet;</pre></td>
+      <td>Replace `java.sql
