@@ -1,0 +1,8 @@
+langchain_google_genai
+dataclasses
+typing
+tree_sitter
+tree_sitter_java
+networkx
+ipykernel
+matplotlib
