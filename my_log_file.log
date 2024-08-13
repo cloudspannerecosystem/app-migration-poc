@@ -1,0 +1,12 @@
+2024-08-13 07:32:57 - app_migrator_analysis - INFO - Total number of groups for Project Java Files: 3
+2024-08-13 07:32:57 - app_migrator_analysis - INFO - Groups Sizes: [8, 6, 4]
+2024-08-13 07:32:57 - app_migrator_analysis - INFO - Processing Group Length: 8
+2024-08-13 07:32:57 - app_migrator_analysis - INFO - Batch Start Index- 0
+2024-08-13 07:33:18 - app_migrator_analysis - INFO - Execution time: 21.11647653579712
+2024-08-13 07:33:18 - app_migrator_analysis - INFO - Processing Group Length: 6
+2024-08-13 07:33:18 - app_migrator_analysis - INFO - Batch Start Index- 0
+2024-08-13 07:33:22 - app_migrator_analysis - INFO - No Changes for file: /usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/UserDaoImpl.java
+2024-08-13 07:33:56 - app_migrator_analysis - INFO - Execution time: 38.676631450653076
+2024-08-13 07:33:56 - app_migrator_analysis - INFO - Processing Group Length: 4
+2024-08-13 07:33:56 - app_migrator_analysis - INFO - Batch Start Index- 0
+2024-08-13 07:34:07 - app_migrator_analysis - INFO - Execution time: 10.882050037384033
