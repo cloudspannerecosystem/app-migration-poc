@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils import list_files # type: ignore
+from utils import list_files, replace_and_save_html # type: ignore
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI # type: ignore
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
@@ -20,6 +20,36 @@ import dataclasses
 import json
 from dependency_analyzer.java_analyze import JavaAnalyzer
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+import aiofiles
+import logging
+import time
+
+# Define a custom log format
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_datefmt = "%Y-%m-%d %H:%M:%S"
+
+# Create a logger instance
+logger = logging.getLogger(__name__)
+
+# Set the log level to capture all log messages
+logger.setLevel(level=logging.DEBUG)
+
+# Create a handler for console output
+# Create a file handler (optional, logs to a file)
+file_handler = logging.FileHandler('my_log_file.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter(log_format, log_datefmt))
+
+# Create a console handler (optional, logs to the console)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter(log_format, log_datefmt))
+console_handler.setLevel(logging.ERROR)  # On
+
+# Add the console handler and file handler to the logger
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
 
 @dataclasses.dataclass(frozen=True)
 class FileAnalysis:
@@ -294,7 +324,7 @@ class MigrationSummarizer:
 
         return summaries
 
-    def summarize_report(self, summaries: List[List[FileAnalysis]]) -> str:
+    async def summarize_report(self, summaries: List[List[FileAnalysis]], output_file: str = 'spanner_migration_report.html'):
         """
         Summarizes the analysis report for the migration project into an HTML formatted report.
 
@@ -309,30 +339,38 @@ class MigrationSummarizer:
         json_analysis = json.dumps(change_dicts, indent=2)
 
         prompt = f"""
-        You are a Cloud Spanner expert. You are working on migrating an application from MySQL JDBC to Cloud Spanner JDBC.
-        You see the following analysis of the changes needed to be updated and where. Write a report which is easy to read and describes the major categories
-        of issues identified, and how complex each category of issue is in terms of whether it requires just basic coding knowledge,
-        deep architectural experience, or something in between.
+        You are a Cloud Spanner expert with deep experience migrating applications from PostgreSQL. You are reviewing an analysis of changes required to 
+        transition an application from PostgreSQL JDBC, Hibernate, and Spring Data JPA to Spanner with its PostgreSQL dialect.
 
-        Please write the report in HTML format, with formatted section headers. The report should detail what to change, where to change, why to change,
-        and how to change, with exact line numbers. Include tables to present the data clearly. 
+        Please be focused towards migrating of complex data types and transactional handling.
 
-        Use this structure:
-        1. Title: Cloud Spanner Migration Report
-        2. Summary: Overview of the report's purpose.
-        3. Classification of differnt categories of chagnes & complexity associated with it.
-        4. Detailed Analysis for Each File:
-            - File Name
-            - Table with columns: Start Line, End Line, Code Sample, Suggested Change, Description, Warnings
-
-        
-        Plese use code highlighting, different colors & styling to make it easy to read.
-
-        Analysis:
+        **Task:**
+        1. Craft a concise introduction summarizing the overall migration effort.
+        2. Analyze the following JSON data containing change details and identify the categories of issues.
         ```json
         {json_analysis}
+
+        Please structure your response in the following JSON format, output should be sorted in the order of complexity from low to high.
+        {{
+            "introduction": "<Summary of the Changes>",
+            "categories": [
+                {{
+                    "Category": "<Category of Changes>",
+                    "Description": ["<human-readable description Point 1>", "<human-readable description Point 2>" ...],
+                    "Complexity": "<Complexity of the Issue>" 
+                }}
+                // ... more categories
+            ]
+        }}
         """
 
-        response = self._llm.invoke(prompt).content
+        response = await self._llm.ainvoke(prompt)
+        response = response.content
 
-        return response
+        data = json.loads(response[8:-4])
+
+
+        changes = [dataclasses.asdict(x) for x in summaries]
+        data['summaries'] = changes
+
+        replace_and_save_html('migration_template.html', output_file, data)

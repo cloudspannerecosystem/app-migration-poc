@@ -6,3 +6,4 @@ tree_sitter_java
 networkx
 ipykernel
 matplotlib
+jinja2
