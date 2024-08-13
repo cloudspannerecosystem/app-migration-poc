@@ -115,7 +115,7 @@ class MigrationSummarizer:
             how it will need to be modified to work with Cloud Spanner. The code provided contains blank lines, comments, documentation, and other non-executable elements.
             You can refer function docs and comments to understand more about it and then suggest the chagnes. 
 
-            Return your results in JSON format.  The JSON output should have three top-level keys:
+            Return your results in JSON dictionary format.  The JSON output should have three top-level keys:
 
             *   `file_modifications`: Contains a list of dictionaries, each detailing a code modification required for Cloud Spanner compatibility. Follow the format outlined below for each modification.
             *   `method_signature_changes`: Contains a list of dictionaries, each detailing a public method signature changes required for caller. This includes the original and modified signature, along with any relevant explanations. No need to include changes if it's just a change in parameters name.
@@ -222,7 +222,7 @@ class MigrationSummarizer:
         """
         prompt_template = """
             The following generated JSON value failed to parse, it contained the following
-            error. Please return corrected string as a valid JSON list. All strings should be
+            error. Please return corrected string as a valid JSON in the dictionary format. All strings should be
             single-line strings.
 
             The original prompt was:

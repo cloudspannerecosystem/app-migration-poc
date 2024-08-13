@@ -204,6 +204,29 @@ class JavaAnalyzer:
                 - list: A list of lists, where each inner list contains files that can be executed in parallel.
         """
         G = self.get_dependency_graph(project_dir)
+
+        def relax_cycles(G):
+            # Find all simple cycles
+            cycles = list(nx.simple_cycles(G))
+            
+            # To store edges to be removed
+            edges_to_remove = set()
+            
+            for cycle in cycles:
+                # Arbitrarily choose an edge to remove
+                # In this example, we remove the first edge in the cycle
+                u, v = cycle[0], cycle[1]
+                edges_to_remove.add((u, v))
+            
+            # Remove the identified edges
+            G.remove_edges_from(edges_to_remove)
+            
+            return edges_to_remove
+        
+
+        edges = relax_cycles(G)
+        print ("Edges removed to relax cyles: ", len(edges))
+        
         sorted_tasks = list(nx.topological_sort(G))[::-1]
 
         def group_tasks_optimized(tasks, graph):
