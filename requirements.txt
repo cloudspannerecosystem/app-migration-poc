@@ -7,3 +7,4 @@ networkx
 ipykernel
 matplotlib
 jinja2
+aiofiles

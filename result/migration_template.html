@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cloud Spanner Migration Report</title>
+<style>
+body {
+  font-family: sans-serif;
+}
+
+h1, h2, h3 {
+  margin-top: 1em;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 0.5em;
+}
+
+th, td {
+  border: 1px solid black;
+  padding: 0.5em;
+}
+
+code {
+  background-color: #f0f0f0;
+  padding: 0.2em;
+}
+
+.smaller-font {
+  font-size: x-small;
+}
+
+</style>
+</head>
+<body>
+
+<h1>Spanner Migration Report</h1>
+
+<h2>Introduction</h2>
+
+<p>{{ introduction }}</p>
+
+<h2>Issue Categories</h2>
+
+<p>We've identified the following categories of issues:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Description</th>
+      <th>Complexity</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in categories %}
+    <tr>
+        <td>{{ row.Category }}</td>
+        <td>
+          <ul>
+              {% for descp in row.Description %}
+                  <li>{{ descp }}</li>
+              {% endfor %}
+          </ul>
+        </td>
+        <td>{{ row.Complexity }}</td>
+    </tr>
+{% endfor %}
+  </tbody>
+</table>
+
+<h2>Detailed Changes</h2>
+
+<p>The following table provides a detailed breakdown of the required changes:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Lines</th>
+      <th>Original Code</th>
+      <th>Suggested Code</th>
+      <th>Description</th>
+      <th>Warnings</th>
+    </tr>
+  </thead>
+  <tbody class="smaller-font">
+    {% for row in summaries %}
+    <tr>
+        <td>{{ row.filename }}</td>
+        <td>{{ row.start_line }} - {{ row.end_line }}</td>
+        <td>{{ row.code_sample }}</td>
+        <td>{{ row.suggested_change }}</td>
+        <td>{{ row.description }}</td>
+        <td>
+          <ul>
+              {% for warn in row.warnings %}
+                  <li>{{ warn }}</li>
+              {% endfor %}
+          </ul>
+        </td>
+        <td>{{ row.Complexity }}</td>
+    </tr>
+{% endfor %}
+  </tbody>
+<table>
+  

@@ -14,7 +14,11 @@
 
 from utils import list_files, replace_and_save_html # type: ignore
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI # type: ignore
+from langchain_google_genai import (
+    ChatGoogleGenerativeAI,
+    HarmBlockThreshold,
+    HarmCategory,
+) # type: ignore
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 import dataclasses
 import json
@@ -79,9 +83,14 @@ class MigrationSummarizer:
         """
         if google_generative_ai_api_key is not None:
             os.environ["GOOGLE_API_KEY"] = google_generative_ai_api_key
-        self._llm = ChatGoogleGenerativeAI(model="models/gemini-1.5-pro")
+        self._llm = ChatGoogleGenerativeAI(
+                model="gemini-1.5-pro",
+                safety_settings={
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                },
+            )
 
-    def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
+    async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
         Analyzes a given file to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
@@ -93,16 +102,16 @@ class MigrationSummarizer:
         Returns:
             Tuple[List[FileAnalysis], List[MethodSignatureChange]]: A list of file modifications and method signature changes.
         """
-        if file_content is None:
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    file_content = f.read()
-            except UnicodeDecodeError as e:
-                return [], []
+        try:
+            async with aiofiles.open(filepath, "r", encoding="utf-8") as f:
+                file_content = await f.read()
+        except UnicodeDecodeError as e:
+            print ("Reading Fife Error: ", str(e))
+            return [], []    # Return empty lists on decode error
 
         prompt = f"""
             You are a Cloud Spanner expert. You are working on migrating an application
-            from MySQL JDBC to Cloud Spanner JDBC. Review the following file and identify
+            from PostgreSQL JDBC, Hibernate & Spring Data JPA to Spanner with PostgreSQL dialect with JDBC, Hibernate & Spring Data JPA. Review the following file and identify
             how it will need to be modified to work with Cloud Spanner. The code provided contains blank lines, comments, documentation, and other non-executable elements.
             You can refer function docs and comments to understand more about it and then suggest the chagnes. 
 
@@ -167,8 +176,9 @@ class MigrationSummarizer:
             Please also consdier how the method changes in dependent files will impact the changes in this file.
             """
         
-        response = self._llm.invoke(prompt).content
-        response_parsed = self.json_multishot(prompt, response)
+        response = await self._llm.ainvoke(prompt)
+        
+        response_parsed = await self.json_multishot(prompt, response.content, filepath)
 
         file_analysis = []
         method_signatures = []
@@ -198,7 +208,7 @@ class MigrationSummarizer:
 
         return file_analysis, method_signatures
     
-    def json_multishot(self, original_prompt: str, response: str, retries: int = 10) -> List[Dict[str, Union[str, List]]]:
+    async def json_multishot(self, original_prompt: str, response: str,  filepath: str, retries: int = 3) -> List[Dict[str, Union[str, List]]]:
         """
         Attempts to correct and parse JSON responses from the language model multiple times if errors occur.
 
@@ -229,22 +239,37 @@ class MigrationSummarizer:
 
         for i in range(retries):
             response_text = response.strip()
-
+            if response_text == '':
+                logger.info ('No Changes for file: %s', filepath)
+                return []
             if response_text.startswith('```json\n') and response_text.endswith('\n```'):
                 response_text = response_text[8:-4]
-
+                if response_text == '':
+                    logger.info ('No Changes for file but json: %s', filepath)
+                    return []
             try:
                 result = json.loads(response_text)
                 if isinstance(result, dict):
                     return [result]
-                return result
-            except json.decoder.JSONDecodeError as e:
-                error_message = str(e)
-                response = self._llm.invoke(prompt_template.format(original_prompt, response_text, error_message)).content
 
+                error = 'The output is not in the desired format, top level object is a list instead of dictionary'
+            
+            except json.decoder.JSONDecodeError as e:
+                error = str(e)
+
+            logger.warning ('Error: %s %s %s', error, filepath, response_text)
+            response = await self._llm.ainvoke(prompt_template.format(original_prompt, response_text, error))
+            response = response.content
+        
+        
+        if response == '':
+            logger.info ('No Changes for file last: %s', filepath)
+            return []
+
+        logger.error('Not Done: %s %s', filepath, response)
         return []
 
-    def analyze_project(self, directory: str) -> List[List[FileAnalysis]]:
+    async def analyze_project(self, directory: str, max_threads = 2, batch_size=100) -> List[List[FileAnalysis]]:
         """
         Analyzes all files in a given project directory to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
@@ -259,8 +284,6 @@ class MigrationSummarizer:
         Returns:
             List[List[FileAnalysis]]: A list of file analyses, each containing necessary modifications for the migration.
         """
-        # List all Java and XML files in the given directory
-        files = list_files(directory, ['java', 'xml'])
         
         # Initialize a JavaAnalyzer to analyze dependencies between files
         dependency_analyzer = JavaAnalyzer()
@@ -273,11 +296,11 @@ class MigrationSummarizer:
         
         # Initialize a dictionary to store the results of analyzed files (dynamic programming cache)
         dp = {}
-        
-        # Maximum number of threads for concurrent processing
-        max_threads = 10
 
-        def process_dependency(node):
+        logger.info("Total number of groups for Project Java Files: %s", len(list_of_lists))
+        logger.info("Groups Sizes: %s", [len(x) for x in list_of_lists])
+
+        async def process_dependency(node):
             """
             Analyzes a file node, taking into account its dependencies.
 
@@ -290,41 +313,50 @@ class MigrationSummarizer:
             Returns:
                 file_analysis: The result of the file analysis.
             """
-            results = []
+            result = []
 
-            # Collect results from all child nodes (dependencies)
             for child in G.successors(node):
-                results.extend(dp[child])
+                result.append(dp[child]);
+        
+            result = [item for sublist in result for item in sublist]
+            change_dicts = [change.__dict__ for change in result]
+            json_string = json.dumps(change_dicts, indent=2)
 
-            # Convert the results to a JSON string for method changes
-            result_dicts = [result.__dict__ for result in results]
-            json_string = json.dumps(result_dicts, indent=2)
-            
-            # Analyze the current file using the gathered results of its dependencies
-            file_analysis, method_changes = self.analyze_file(filepath=node, method_changes=json_string)
-            
-            # Store the analysis result in the dp dictionary
-            dp[node] = method_changes
+            file_analysis, methods_changes = await self.analyze_file(filepath=node, method_changes=json_string)
+
+            dp[node] = methods_changes
 
             return file_analysis
 
-        # Process each list of dependencies concurrently using ThreadPoolExecutor
+        async def process_batch(batch):  # Process a batch of dependencies
+            tasks = [process_dependency(bb) for bb in batch] 
+    
+            # Run tasks concurrently and get results
+            results = await asyncio.gather(*tasks)  
+
+            return results
+
         for dependencies in list_of_lists:
-            with ThreadPoolExecutor(max_workers=max_threads) as executor:
-                # Submit the process_dependency function for each dependency in the current list
-                futures = {executor.submit(process_dependency, dep): dep for dep in dependencies}
-                for future in as_completed(futures):
-                    product = futures[future]
-                    try:
-                        # Get the result of the future and add it to the summaries
-                        result = future.result()
-                        summaries.append(result)
-                    except Exception as e:
-                        print(f"Error processing {product}: {e}")
+            logger.info('Processing Group Length: %s', len(dependencies))
+            start_time = time.time()
+            # Batching logic (improved)
+            for i in range(0, len(dependencies), batch_size):
+                logger.info('Batch Start Index- %s', str(i))
+                batch = dependencies[i:i + batch_size]
+
+                # Schedule the batch for processing
+                batch_results = await process_batch(batch)
+
+                summaries.extend(batch_results)  # Collect results from all batches
+
+            end_time = time.time()
+            execution_time = end_time - start_time
+
+            logger.info("Execution time: %s", execution_time)
 
         return summaries
 
-    async def summarize_report(self, summaries: List[List[FileAnalysis]], output_file: str = 'spanner_migration_report.html'):
+    async def summarize_report(self, summaries: List[List[FileAnalysis]], output_file: str = 'result/spanner_migration_report.html'):
         """
         Summarizes the analysis report for the migration project into an HTML formatted report.
 
@@ -334,6 +366,7 @@ class MigrationSummarizer:
         Returns:
             str: The HTML formatted summary report.
         """
+        template_path: str = 'result/migration_template.html'
         flattened_summaries = [item for sublist in summaries for item in sublist]
         change_dicts = [change.__dict__ for change in flattened_summaries]
         json_analysis = json.dumps(change_dicts, indent=2)
@@ -369,8 +402,7 @@ class MigrationSummarizer:
 
         data = json.loads(response[8:-4])
 
-
-        changes = [dataclasses.asdict(x) for x in summaries]
+        changes = [dataclasses.asdict(x) for x in flattened_summaries]
         data['summaries'] = changes
 
-        replace_and_save_html('migration_template.html', output_file, data)
+        replace_and_save_html(template_path, output_file, data)

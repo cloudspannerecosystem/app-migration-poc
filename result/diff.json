@@ -1,11 +1,86 @@
 [
-  [],
-  [],
-  [],
   [
     {
       "code_sample": "private int id;",
-      "description": "Cloud Spanner primary keys must be of type Long for compatibility with the database.",
+      "description": "Cloud Spanner recommends using Long for ID fields to ensure sufficient key space.",
+      "end_line": 3,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Book.java",
+      "start_line": 3,
+      "suggested_change": "private Long id;",
+      "warnings": []
+    }
+  ],
+  [
+    {
+      "code_sample": "import org.apache.commons.lang3.RandomStringUtils;",
+      "description": "Import Key to use it for generating a random key",
+      "end_line": 3,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 3,
+      "suggested_change": "import com.google.cloud.spanner.Key;",
+      "warnings": []
+    },
+    {
+      "code_sample": "private int id;",
+      "description": "Change int type to String and auto-generate it. Cloud Spanner doesn't support auto-incrementing IDs, recommending to use library like RandomStringUtils for that. Update the data type of ID from int to String and use a random string generator like RandomStringUtils to generate unique IDs.",
+      "end_line": 4,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 4,
+      "suggested_change": "private String id = Key.of(RandomStringUtils.randomAlphanumeric(10)).toString();",
+      "warnings": []
+    },
+    {
+      "code_sample": "public int getId() {",
+      "description": "Change int to String",
+      "end_line": 8,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 8,
+      "suggested_change": "public String getId() {",
+      "warnings": []
+    },
+    {
+      "code_sample": "public void setId(int id) {",
+      "description": "Change int to String",
+      "end_line": 11,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 11,
+      "suggested_change": "public void setId(String id) {",
+      "warnings": []
+    },
+    {
+      "code_sample": "private float salary;",
+      "description": "Change float to double.",
+      "end_line": 6,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 6,
+      "suggested_change": "private double salary;",
+      "warnings": [
+        "Cloud Spanner uses `NUMERIC` for decimal values, which maps to `BigDecimal` in Java. However, using `BigDecimal` might require significant code changes. Using `double` instead of BigDecimal can lead to precision loss for financial applications."
+      ]
+    },
+    {
+      "code_sample": "public float getSalary() {",
+      "description": "Change float to double.",
+      "end_line": 20,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 20,
+      "suggested_change": "public double getSalary() {",
+      "warnings": []
+    },
+    {
+      "code_sample": "public void setSalary(float salary) {",
+      "description": "Change float to double.",
+      "end_line": 23,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
+      "start_line": 23,
+      "suggested_change": "public void setSalary(double salary) {",
+      "warnings": []
+    }
+  ],
+  [
+    {
+      "code_sample": "private int id;",
+      "description": "Change the 'id' field type from 'int' to 'Long'. Cloud Spanner's PostgreSQL dialect uses a 64-bit integer for auto-incrementing IDs.",
       "end_line": 7,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java",
       "start_line": 7,
@@ -13,737 +88,508 @@
       "warnings": []
     },
     {
-      "code_sample": "public int getId() {",
-      "description": "Updated the return type to Long to match the updated id field type.",
+      "code_sample": "private String date_created;",
+      "description": "Change the 'date_created' field type from 'String' to 'Timestamp' to store date and time information correctly.",
       "end_line": 12,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java",
       "start_line": 12,
-      "suggested_change": "public Long getId() {",
+      "suggested_change": "private Timestamp date_created;",
       "warnings": []
     },
     {
-      "code_sample": "public void setId(int id) {",
-      "description": "Updated the parameter type to Long to match the updated id field type.",
+      "code_sample": "public int getId() {",
+      "description": "Change the return type of 'getId' from 'int' to 'Long' to match the updated 'id' field type.",
       "end_line": 15,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java",
       "start_line": 15,
-      "suggested_change": "public void setId(Long id) {",
-      "warnings": []
-    }
-  ],
-  [
-    {
-      "code_sample": "private int phone;",
-      "description": "Cloud Spanner doesn't have an 'INT' data type that maps directly to Java 'int'.\nIt's generally recommended to use 'String' to represent phone numbers for flexibility and to avoid potential integer overflow issues. You can always validate and format the phone number at the application level.",
-      "end_line": 11,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/User.java",
-      "start_line": 11,
-      "suggested_change": "private String phone;",
-      "warnings": []
-    },
-    {
-      "code_sample": "public int getPhone() {",
-      "description": "Change return type to match the updated 'phone' field type.",
-      "end_line": 54,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/User.java",
-      "start_line": 54,
-      "suggested_change": "public String getPhone() {",
-      "warnings": []
-    },
-    {
-      "code_sample": "public void setPhone(int phone) {",
-      "description": "Change parameter type to match the updated 'phone' field type.",
-      "end_line": 58,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/User.java",
-      "start_line": 58,
-      "suggested_change": "public void setPhone(String phone) {",
-      "warnings": []
-    }
-  ],
-  [
-    {
-      "code_sample": "private int id;",
-      "description": "Cloud Spanner primary keys must be longs.",
-      "end_line": 3,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Book.java",
-      "start_line": 3,
-      "suggested_change": "private Long id;",
-      "warnings": []
-    },
-    {
-      "code_sample": "public int getId() {",
-      "description": "Change int to Long for Cloud Spanner compatibility.",
-      "end_line": 10,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Book.java",
-      "start_line": 10,
       "suggested_change": "public Long getId() {",
       "warnings": []
     },
     {
       "code_sample": "public void setId(int id) {",
-      "description": "Change int to Long for Cloud Spanner compatibility.",
-      "end_line": 13,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Book.java",
-      "start_line": 13,
+      "description": "Change the parameter type of 'setId' from 'int' to 'Long' to match the updated 'id' field type.",
+      "end_line": 18,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java",
+      "start_line": 18,
       "suggested_change": "public void setId(Long id) {",
       "warnings": []
+    },
+    {
+      "code_sample": "public String getDateCreated() {",
+      "description": "Change the return type of 'getDateCreated' from 'String' to 'Timestamp' to match the updated 'date_created' field type.",
+      "end_line": 45,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java",
+      "start_line": 45,
+      "suggested_change": "public Timestamp getDateCreated() {",
+      "warnings": []
+    },
+    {
+      "code_sample": "public void setDateCreated(String date_created) {",
+      "description": "Change the parameter type of 'setDateCreated' from 'String' to 'Timestamp' to match the updated 'date_created' field type.",
+      "end_line": 48,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Feedback.java",
+      "start_line": 48,
+      "suggested_change": "public void setDateCreated(Timestamp date_created) {",
+      "warnings": []
     }
   ],
   [
     {
-      "code_sample": "private String date_purchased;",
-      "description": "Cloud Spanner uses Timestamp for storing timestamp values. Changed the type of date_purchased to Timestamp.",
-      "end_line": 9,
+      "code_sample": "private String books;",
+      "description": "Cloud Spanner doesn't have a direct equivalent to PostgreSQL's ARRAY type. You should change `String books` to `String[] books` to represent multiple books. You can also explore using Cloud Spanner's ARRAY feature if it aligns with your use case and PostgreSQL dialect supports it.",
+      "end_line": 8,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Purchase.java",
-      "start_line": 9,
-      "suggested_change": "private Timestamp date_purchased;",
+      "start_line": 8,
+      "suggested_change": "private String[] books;",
       "warnings": []
     },
     {
-      "code_sample": "public String getDatePurchased() {",
-      "description": "Changed the return type of getDatePurchased to Timestamp.",
+      "code_sample": "public String getBooks() {    \n\t    return books;    \n\t}",
+      "description": "Change return type from `String` to `String[]` to be compatible with the change in `books` field.",
+      "end_line": 35,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Purchase.java",
+      "start_line": 33,
+      "suggested_change": "public String[] getBooks() {    \n\t    return books;    \n\t}",
+      "warnings": []
+    },
+    {
+      "code_sample": "public void setBooks(String books) {    \n\t    this.books = books;    \n\t}",
+      "description": "Change parameter type from `String` to `String[]` to be compatible with the change in `books` field.",
       "end_line": 38,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Purchase.java",
-      "start_line": 38,
-      "suggested_change": "public Timestamp getDatePurchased() {",
-      "warnings": []
-    },
-    {
-      "code_sample": "public void setDatePurchased(String date_purchased) {",
-      "description": "Changed the parameter type of setDatePurchased to Timestamp.",
-      "end_line": 41,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Purchase.java",
-      "start_line": 41,
-      "suggested_change": "public void setDatePurchased(Timestamp date_purchased) {",
-      "warnings": []
-    }
-  ],
-  [
-    {
-      "code_sample": "import com.google.cloud.spanner.annotation.Column;",
-      "description": "Import necessary annotation for Cloud Spanner",
-      "end_line": 2,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 2,
-      "suggested_change": "import com.google.cloud.spanner.annotation.Column;\nimport com.google.cloud.spring.data.spanner.core.mapping.PrimaryKey;",
-      "warnings": []
-    },
-    {
-      "code_sample": "private int id;",
-      "description": "Update data type from `int` to `Long` and add annotations for Cloud Spanner Primary key and Column mapping.",
-      "end_line": 3,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 3,
-      "suggested_change": "    @PrimaryKey\n    @Column(name = \"id\", spannerType = \"INT64\")\n    private Long id;",
-      "warnings": []
-    },
-    {
-      "code_sample": "private float salary;",
-      "description": "Cloud Spanner uses `Double` for floating-point numbers. Update from `float` to `Double`.",
-      "end_line": 5,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 5,
-      "suggested_change": "    private Double salary;",
-      "warnings": []
-    },
-    {
-      "code_sample": "public int getId() {",
-      "description": "Update return type from `int` to `Long` to match updated id field.",
-      "end_line": 8,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 8,
-      "suggested_change": "    public Long getId() {",
-      "warnings": []
-    },
-    {
-      "code_sample": "public void setId(int id) {",
-      "description": "Update parameter type from `int` to `Long` to match the updated id field.",
-      "end_line": 11,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 11,
-      "suggested_change": "    public void setId(Long id) {",
-      "warnings": []
-    },
-    {
-      "code_sample": "public float getSalary() {",
-      "description": "Update return type from `float` to `Double` to match updated salary field.",
-      "end_line": 19,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 19,
-      "suggested_change": "    public Double getSalary() {",
-      "warnings": []
-    },
-    {
-      "code_sample": "public void setSalary(float salary) {",
-      "description": "Update parameter type from `float` to `Double` to match updated salary field.",
-      "end_line": 22,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/beans/Emp.java",
-      "start_line": 22,
-      "suggested_change": "    public void setSalary(Double salary) {",
+      "start_line": 36,
+      "suggested_change": "public void setBooks(String[] books) {    \n\t    this.books = books;    \n\t}",
       "warnings": []
     }
   ],
   [],
-  [
-    {
-      "code_sample": "jdbcTemplate.update(sql, new Object[] { user.getUsername(), user.getPassword(), user.getFirstname(),\n    user.getLastname(), user.getEmail(), user.getAddress(), user.getPhone() });",
-      "description": "Cloud Spanner does not support setting INT64 from a String. Converting the phone number to Long before setting it to the statement.",
-      "end_line": 27,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/UserDaoImpl.java",
-      "start_line": 25,
-      "suggested_change": "jdbcTemplate.update(sql, new Object[] { user.getUsername(), user.getPassword(), user.getFirstname(),\n    user.getLastname(), user.getEmail(), user.getAddress(), Long.parseLong(user.getPhone()) });",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql = \"select * from users where username='\" + login.getUsername() + \"' and password='\" + login.getPassword()\n    + \"'\";",
-      "description": "Modified the query to use parameterized statements instead of string concatenation for security and to align with Cloud Spanner's recommendations.",
-      "end_line": 33,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/UserDaoImpl.java",
-      "start_line": 32,
-      "suggested_change": "String sql = \"select * from users where username = ? and password = ?\";\n\n    List<User> users = jdbcTemplate.query(sql, new UserMapper(), login.getUsername(), login.getPassword());",
-      "warnings": [
-        "Direct string concatenation for SQL queries is a security vulnerability (SQL injection). Always use parameterized queries."
-      ]
-    },
-    {
-      "code_sample": "user.setPhone(rs.getInt(\"phone\"));",
-      "description": "Cloud Spanner's JDBC driver returns a 'long' for INT64. Updating the 'getPhone' call to get Long and converting to String to match the 'User' object's field type.",
-      "end_line": 55,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/UserDaoImpl.java",
-      "start_line": 55,
-      "suggested_change": "user.setPhone(String.valueOf(rs.getLong(\"phone\")));",
-      "warnings": []
-    }
-  ],
+  [],
+  [],
+  [],
   [
     {
       "code_sample": "import java.sql.ResultSet;",
-      "description": "Use Cloud Spanner's ResultSet instead of java.sql.ResultSet.",
-      "end_line": 2,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 2,
+      "description": "Use Cloud Spanner's ResultSet for compatibility.",
+      "end_line": 3,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 3,
       "suggested_change": "import com.google.cloud.spanner.ResultSet;",
       "warnings": []
     },
     {
       "code_sample": "import java.sql.SQLException;",
-      "description": "Use Cloud Spanner's SpannerException instead of java.sql.SQLException.",
-      "end_line": 3,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 3,
-      "suggested_change": "import com.google.cloud.spanner.SpannerException;",
-      "warnings": []
-    },
-    {
-      "code_sample": "import org.springframework.jdbc.core.BeanPropertyRowMapper;",
-      "description": "Use SpannerTemplate for interacting with Cloud Spanner.",
+      "description": "Use Cloud Spanner's SpannerException for compatibility.",
       "end_line": 4,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
       "start_line": 4,
-      "suggested_change": "import com.google.cloud.spanner.jdbc.spring.SpannerTemplate;",
-      "warnings": []
-    },
-    {
-      "code_sample": "import org.springframework.jdbc.core.JdbcTemplate;",
-      "description": "Remove unused import.",
-      "end_line": 5,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 5,
-      "suggested_change": "import org.springframework.jdbc.core.RowMapper;",
-      "warnings": []
-    },
-    {
-      "code_sample": "JdbcTemplate template;",
-      "description": "Use SpannerTemplate instead of JdbcTemplate.",
-      "end_line": 9,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 9,
-      "suggested_change": "SpannerTemplate template;",
-      "warnings": []
-    },
-    {
-      "code_sample": "public void setTemplate(JdbcTemplate template) {",
-      "description": "Use SpannerTemplate instead of JdbcTemplate.",
-      "end_line": 11,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 11,
-      "suggested_change": "public void setTemplate(SpannerTemplate template) {",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"insert into purchase_detail(name, phone, books, quantity, total_price) values('\" + p.getName() + \"', '\" + p.getPhone() + \"', '\" + p.getBooks() + \"',  \" + p.getQuantity() + \", \" + p.getTotalPrice() + \")\";",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities and set date_purchased to CURRENT_TIMESTAMP().",
-      "end_line": 15,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 15,
-      "suggested_change": "String sql = \"INSERT INTO purchase_detail (name, phone, books, quantity, total_price, date_purchased) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP())\";\n        return template.update(sql, p.getName(), p.getPhone(), p.getBooks(), p.getQuantity(), p.getTotalPrice());",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"update book set name='\" + p.getName() + \"', phone='\" + p.getPhone() + \"', books='\" + p.getBooks() + \"', quantity=\" + p.getQuantity() + \", total_price=\" + p.getTotalPrice() + \" \";",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities and add a WHERE clause to specify the row to update.",
-      "end_line": 19,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 19,
-      "suggested_change": "String sql = \"UPDATE book SET name=?, phone=?, books=?, quantity=?, total_price=? WHERE id=?\";\n        return template.update(sql, p.getName(), p.getPhone(), p.getBooks(), p.getQuantity(), p.getTotalPrice(), p.getId());",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"delete from purchase_detail where id=\" + id + \"\";",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities.",
-      "end_line": 23,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 23,
-      "suggested_change": "String sql = \"DELETE FROM purchase_detail WHERE id=?\";\n        return template.update(sql, id);",
-      "warnings": []
-    },
-    {
-      "code_sample": "return template.queryForObject(sql, new Object[]{id}, new BeanPropertyRowMapper<Purchase>(Purchase.class));",
-      "description": "Use a lambda expression to map the ResultSet to a Purchase object and retrieve date_purchased as a Timestamp.",
-      "end_line": 27,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 27,
-      "suggested_change": "return template.queryForObject(sql, new Object[]{id}, (rs, rowNum) -> {\n            Purchase purchase = new Purchase();\n            purchase.setId(rs.getLong(\"id\"));\n            purchase.setName(rs.getString(\"name\"));\n            purchase.setPhone(rs.getString(\"phone\"));\n            purchase.setBooks(rs.getString(\"books\"));\n            purchase.setQuantity(rs.getInt(\"quantity\"));\n            purchase.setTotalPrice(rs.getFloat(\"total_price\"));\n            purchase.setDatePurchased(rs.getTimestamp(\"date_purchased\"));\n            return purchase;\n        });",
-      "warnings": []
-    },
-    {
-      "code_sample": "public Purchase mapRow(ResultSet rs, int row) throws SQLException {",
-      "description": "Update exception type to SpannerException.",
-      "end_line": 33,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 33,
-      "suggested_change": "public Purchase mapRow(ResultSet rs, int row) throws SpannerException {",
-      "warnings": []
-    },
-    {
-      "code_sample": "e.setId(rs.getInt(1));",
-      "description": "Use getLong to retrieve Long value for id.",
-      "end_line": 35,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 35,
-      "suggested_change": "e.setId(rs.getLong(1));",
-      "warnings": []
-    },
-    {
-      "code_sample": "e.setDatePurchased(rs.getString(4));",
-      "description": "Retrieve date_purchased as a Timestamp.",
-      "end_line": 41,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
-      "start_line": 41,
-      "suggested_change": "e.setDatePurchased(rs.getTimestamp(\"date_purchased\"));",
-      "warnings": []
-    }
-  ],
-  [
-    {
-      "code_sample": "import java.sql.ResultSet;",
-      "description": "Use Cloud Spanner's ResultSet instead of java.sql.ResultSet.",
-      "end_line": 2,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 2,
-      "suggested_change": "import com.google.cloud.spanner.ResultSet;",
-      "warnings": []
-    },
-    {
-      "code_sample": "import java.sql.SQLException;",
-      "description": "Use Cloud Spanner's SpannerException instead of java.sql.SQLException.",
-      "end_line": 3,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 3,
       "suggested_change": "import com.google.cloud.spanner.SpannerException;",
       "warnings": []
     },
     {
       "code_sample": "import org.springframework.jdbc.core.BeanPropertyRowMapper;",
       "description": "Replace Spring JDBC's BeanPropertyRowMapper with SpannerData annotation for mapping.",
-      "end_line": 5,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 5,
+      "end_line": 6,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 6,
       "suggested_change": "import com.google.cloud.spring.data.spanner.core.mapping.SpannerData;",
       "warnings": []
     },
     {
       "code_sample": "import org.springframework.jdbc.core.JdbcTemplate;",
-      "description": "Replace Spring JDBC's JdbcTemplate with Cloud Spanner's SpannerTemplate.",
-      "end_line": 6,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 6,
+      "description": "Replace Spring JDBC's JdbcTemplate with Spring Data Spanner's SpannerTemplate.",
+      "end_line": 7,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 7,
       "suggested_change": "import org.springframework.beans.factory.annotation.Autowired;\nimport com.google.cloud.spring.data.spanner.core.SpannerTemplate;",
       "warnings": []
     },
     {
       "code_sample": "import org.springframework.jdbc.core.RowMapper;",
-      "description": "Use Cloud Spanner's Key for identifying rows instead of RowMapper.",
-      "end_line": 7,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 7,
-      "suggested_change": "import com.google.cloud.spanner.Key;",
+      "description": "Remove unused import and add imports for pagination with Spring Data.",
+      "end_line": 8,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 8,
+      "suggested_change": "import org.springframework.data.domain.PageRequest;\nimport org.springframework.data.domain.Pageable;",
       "warnings": []
     },
     {
       "code_sample": "JdbcTemplate template;",
-      "description": "Use Cloud Spanner's SpannerTemplate and autowire it.",
-      "end_line": 9,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 9,
-      "suggested_change": "@Autowired\nSpannerTemplate template;",
+      "description": "Use SpannerTemplate from Spring Data Spanner.",
+      "end_line": 12,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 12,
+      "suggested_change": "SpannerTemplate template;",
       "warnings": []
     },
     {
       "code_sample": "public void setTemplate(JdbcTemplate template) {",
-      "description": "Remove the setTemplate method as SpannerTemplate is autowired.",
-      "end_line": 13,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 11,
-      "suggested_change": "",
+      "description": "Update the setter to use SpannerTemplate.",
+      "end_line": 14,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 14,
+      "suggested_change": "public void setTemplate(SpannerTemplate template) {",
       "warnings": []
     },
     {
-      "code_sample": "String sql=\"insert into feedback(name, phone, email, feedback) values('\" + p.getName() + \"', '\" + p.getPhone() + \"', '\" + p.getEmail() + \"',  '\" + p.getFeedback() + \"')\";    \n\t    return template.update(sql);",
-      "description": "Use SpannerTemplate's insert method for inserting data directly from the object.",
-      "end_line": 16,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 15,
+      "code_sample": "String sql=\"insert into book(title, author, genre, description, copy, price) values('\" + p.getTitle() + \"', '\" + p.getAuthor() + \"', '\" + p.getGenre() + \"',  '\" + p.getDescription() + \"',  \" + p.getCopy() + \", \" + p.getPrice() + \")\";    \n\t    return template.update(sql);",
+      "description": "Use SpannerTemplate's insert method for simplified data insertion.",
+      "end_line": 19,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 18,
       "suggested_change": "return template.insert(p);",
       "warnings": []
     },
     {
-      "code_sample": "String sql=\"delete from feedback where id=\" + id + \"\";    \n\t    return template.update(sql);",
-      "description": "Use SpannerTemplate's delete method with Key.of(id) to delete a specific row.",
-      "end_line": 19,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 18,
-      "suggested_change": "template.delete(Feedback.class, Key.of(id));\n\t    return 1;",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"select * from feedback where id=?\";    \n\t    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper<Feedback>(Feedback.class));",
-      "description": "Use SpannerTemplate's findById method with Key.of(id) to retrieve a specific object.",
+      "code_sample": "String sql=\"update book set title='\" + p.getTitle() + \"', author='\" + p.getAuthor() + \"', genre='\" + p.getGenre() + \"', description='\" + p.getDescription() + \"', copy=\" + p.getCopy() + \", price=\" + p.getPrice() + \" where id=\" + p.getId() + \"+\";    \n\t    return template.update(sql);",
+      "description": "Use SpannerTemplate's update method for simplified updates.",
       "end_line": 22,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
       "start_line": 21,
-      "suggested_change": "return template.findById(Feedback.class, Key.of(id)).get();",
+      "suggested_change": "return template.update(p);",
       "warnings": []
     },
     {
-      "code_sample": "return template.query(\"select * from feedback\",new RowMapper<Feedback>(){    \n\t        public Feedback mapRow(ResultSet rs, int row) throws SQLException {    \n\t            Feedback e=new Feedback();    \n\t            e.setId(rs.getInt(1));    \n\t            e.setName(rs.getString(2));    \n\t            e.setPhone(rs.getString(3));      \n\t            e.setEmail(rs.getString(4)); \n\t            e.setFeedback(rs.getString(5));        \n\t            e.setDateCreated(rs.getString(6));\n\t            return e;    \n\t        }    \n\t    });",
-      "description": "Use SpannerTemplate's readAll method to retrieve all objects of type Feedback.",
-      "end_line": 35,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "code_sample": "String sql=\"delete from book where id=\" + id + \"+\";    \n\t    return template.update(sql);",
+      "description": "Use SpannerTemplate's delete method with entity type and ID for deletion.",
+      "end_line": 25,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
       "start_line": 24,
-      "suggested_change": "return template.readAll(Feedback.class);",
+      "suggested_change": "template.delete(Book.class, id); \n\t    return 1;",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"select * from book where id=?\";    \n\t    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper<Book>(Book.class));",
+      "description": "Use SpannerTemplate's findById method to retrieve a book by its ID.",
+      "end_line": 28,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 27,
+      "suggested_change": "return template.findById(id, Book.class).orElse(null);",
+      "warnings": []
+    },
+    {
+      "code_sample": "public List<Book> getBooks(){    \n\t    return template.query(\"select * from book\",new RowMapper<Book>(){    \n\t        public Book mapRow(ResultSet rs, int row) throws SQLException {    \n\t            Book e=new Book();    \n\t            e.setId(rs.getInt(1));    \n\t            e.setTitle(rs.getString(2));    \n\t            e.setAuthor(rs.getString(3));    \n\t            e.setGenre(rs.getString(4));     \n\t            e.setDescription(rs.getString(5));       \n\t            e.setCopy(rs.getInt(7));      \n\t            e.setPrice(rs.getFloat(8));     \n\t            return e;    \n\t        }    \n\t    });    \n\t}",
+      "description": "Use SpannerTemplate's readAll method with pagination to retrieve all books.",
+      "end_line": 43,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
+      "start_line": 30,
+      "suggested_change": "public List<Book> getBooks(){\n\t\tPageable page = PageRequest.of(0, 100);\n\t    return template.readAll(Book.class, page).getContent();\n\t}",
       "warnings": [
-        "Reading all rows from a table can be inefficient for large tables. Consider using SpannerQueryOptions for pagination or filtering if necessary."
+        "Fetching all rows using `readAll` might be inefficient for large datasets. Consider adding filtering or pagination for better performance."
       ]
+    }
+  ],
+  [
+    {
+      "code_sample": "import java.sql.ResultSet;\nimport java.sql.SQLException;\nimport java.util.List;\nimport org.springframework.jdbc.core.BeanPropertyRowMapper;\nimport org.springframework.jdbc.core.JdbcTemplate;\nimport org.springframework.jdbc.core.RowMapper;\nimport com.bookstore.beans.Emp;",
+      "description": "Import `NamedParameterJdbcTemplate` for using named parameters in queries, which helps prevent SQL injection vulnerabilities.",
+      "end_line": 8,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 2,
+      "suggested_change": "import java.sql.ResultSet;\nimport java.sql.SQLException;\nimport java.util.List;\nimport org.springframework.jdbc.core.BeanPropertyRowMapper;\nimport org.springframework.jdbc.core.JdbcTemplate;\nimport org.springframework.jdbc.core.RowMapper;\nimport com.bookstore.beans.Emp;\nimport org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;",
+      "warnings": []
+    },
+    {
+      "code_sample": "JdbcTemplate template;",
+      "description": "Change `JdbcTemplate` to `NamedParameterJdbcTemplate` for using named parameters in queries.",
+      "end_line": 10,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 10,
+      "suggested_change": "NamedParameterJdbcTemplate template;",
+      "warnings": []
+    },
+    {
+      "code_sample": "public void setTemplate(JdbcTemplate template) {",
+      "description": "Change parameter type from `JdbcTemplate` to `NamedParameterJdbcTemplate`.",
+      "end_line": 12,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 12,
+      "suggested_change": "public void setTemplate(NamedParameterJdbcTemplate template) {",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"insert into employee(name, salary, department) values('\" + p.getName() + \"',\"+p.getSalary()+\",'\" + p.getdepartment() + \"')\";    \n    return template.update(sql);",
+      "description": "Use named parameters with `NamedParameterJdbcTemplate` to prevent SQL injection vulnerabilities. Also, added `MapSqlParameterSource` to pass named parameters.",
+      "end_line": 17,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 16,
+      "suggested_change": "String sql=\"insert into employee(name, salary, department) values(:name, :salary, :department)\";\n    MapSqlParameterSource params = new MapSqlParameterSource();\n    params.addValue(\"name\", p.getName());\n    params.addValue(\"salary\", p.getSalary());\n    params.addValue(\"department\", p.getdepartment());\n    return template.update(sql, params);",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"update employee set name='\" + p.getName() + \"', salary=\" + p.getSalary() + \",department='\" + p.getdepartment() + \"' where id=\" + p.getId() + \"\\\"\";    \n    return template.update(sql);",
+      "description": "Use named parameters with `NamedParameterJdbcTemplate` to prevent SQL injection vulnerabilities. Also, added `MapSqlParameterSource` to pass named parameters.",
+      "end_line": 21,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 20,
+      "suggested_change": "String sql=\"update employee set name=:name, salary=:salary, department=:department where id=:id\";\n    MapSqlParameterSource params = new MapSqlParameterSource();\n    params.addValue(\"name\", p.getName());\n    params.addValue(\"salary\", p.getSalary());\n    params.addValue(\"department\", p.getdepartment());\n    params.addValue(\"id\", p.getId());\n    return template.update(sql, params);",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"delete from employee where id=\" + id + \"\\\"\";    \n    return template.update(sql);",
+      "description": "Use named parameters with `NamedParameterJdbcTemplate` to prevent SQL injection vulnerabilities. Also, added `MapSqlParameterSource` to pass named parameters.",
+      "end_line": 25,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 24,
+      "suggested_change": "String sql=\"delete from employee where id=:id\";\n    MapSqlParameterSource params = new MapSqlParameterSource();\n    params.addValue(\"id\", id);\n    return template.update(sql, params);",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"select * from employee where id=?;\"    \n    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper<Emp>(Emp.class));",
+      "description": "Use named parameters with `NamedParameterJdbcTemplate` to prevent SQL injection vulnerabilities. Also, added `MapSqlParameterSource` to pass named parameters.",
+      "end_line": 29,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 28,
+      "suggested_change": "String sql=\"select * from employee where id=:id\";\n    MapSqlParameterSource params = new MapSqlParameterSource();\n    params.addValue(\"id\", id);\n    return template.queryForObject(sql, params, new BeanPropertyRowMapper<Emp>(Emp.class));",
+      "warnings": []
+    },
+    {
+      "code_sample": "return template.query(\"select * from employee\",new RowMapper<Emp>(){",
+      "description": "Use `NamedParameterJdbcTemplate` for consistency and pass an empty `MapSqlParameterSource` since there are no parameters in this query.",
+      "end_line": 32,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 32,
+      "suggested_change": "return template.query(\"select * from employee\", new MapSqlParameterSource(), new RowMapper<Emp>(){",
+      "warnings": []
     },
     {
       "code_sample": "e.setId(rs.getInt(1));",
-      "description": "Use rs.getLong to retrieve the Long id value from the ResultSet.",
-      "end_line": 27,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 27,
-      "suggested_change": "e.setId(rs.getLong(1));",
-      "warnings": []
-    },
-    {
-      "code_sample": "public Feedback mapRow(ResultSet rs, int row) throws SQLException {",
-      "description": "Update the mapRow method to throw SpannerException instead of SQLException.",
-      "end_line": 25,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
-      "start_line": 25,
-      "suggested_change": "public Feedback mapRow(ResultSet rs, int row) throws SpannerException {",
+      "description": "Updated to align with the changes in `Emp` class to use `String` for `id`.",
+      "end_line": 35,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "start_line": 35,
+      "suggested_change": "e.setId(rs.getString(1));",
       "warnings": []
     }
   ],
   [
     {
-      "code_sample": "import java.sql.ResultSet;    ",
-      "description": "Use Cloud Spanner's `ResultSet` for compatibility.",
+      "code_sample": "import java.sql.ResultSet;",
+      "description": "Replace the `java.sql.ResultSet` import with `com.google.cloud.spanner.ResultSet` for Cloud Spanner compatibility.",
       "end_line": 2,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
       "start_line": 2,
       "suggested_change": "import com.google.cloud.spanner.ResultSet;",
       "warnings": []
     },
     {
+      "code_sample": "import java.sql.SQLException;",
+      "description": "Replace the `java.sql.SQLException` import with `com.google.cloud.spanner.SpannerException` for Cloud Spanner compatibility.",
+      "end_line": 3,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 3,
+      "suggested_change": "import com.google.cloud.spanner.SpannerException;",
+      "warnings": []
+    },
+    {
       "code_sample": "import org.springframework.jdbc.core.JdbcTemplate;",
-      "description": "Use `NamedParameterJdbcTemplate` for parameterized queries, which are preferred for Cloud Spanner.",
+      "description": "Use `org.springframework.jdbc.core.JdbcOperations` instead of `JdbcTemplate` for better abstraction and compatibility with Cloud Spanner.",
       "end_line": 5,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
       "start_line": 5,
-      "suggested_change": "import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;",
+      "suggested_change": "import org.springframework.jdbc.core.JdbcOperations;",
       "warnings": []
     },
     {
       "code_sample": "JdbcTemplate template;",
-      "description": "Change the type of `template` from `JdbcTemplate` to `NamedParameterJdbcTemplate`.",
+      "description": "Change the type of `template` from `JdbcTemplate` to `JdbcOperations` for better abstraction.",
       "end_line": 8,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
       "start_line": 8,
+      "suggested_change": "JdbcOperations template;",
+      "warnings": []
+    },
+    {
+      "code_sample": "public void setTemplate(JdbcTemplate template) {",
+      "description": "Change the parameter type of `setTemplate` from `JdbcTemplate` to `JdbcOperations`.",
+      "end_line": 10,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 10,
+      "suggested_change": "public void setTemplate(JdbcOperations template) {",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"insert into feedback(name, phone, email, feedback) values('\" + p.getName() + \"', '\" + p.getPhone() + \"', '\" + p.getEmail() + \"',  '\" + p.getFeedback() + \"')\";",
+      "description": "Use parameterized queries instead of string concatenation to prevent SQL injection vulnerabilities.",
+      "end_line": 14,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 14,
+      "suggested_change": "String sql = \"insert into feedback(name, phone, email, feedback) values(?, ?, ?, ?)\";\n        return template.update(sql, p.getName(), p.getPhone(), p.getEmail(), p.getFeedback());",
+      "warnings": []
+    },
+    {
+      "code_sample": "String sql=\"delete from feedback where id=\" + id + \"\";",
+      "description": "Use parameterized queries instead of string concatenation to prevent SQL injection vulnerabilities.",
+      "end_line": 18,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 18,
+      "suggested_change": "String sql = \"delete from feedback where id = ?\";\n        return template.update(sql, id);",
+      "warnings": []
+    },
+    {
+      "code_sample": "public Feedback getFeedbackById(int id){",
+      "description": "The `getFeedbackById` method should accept `Long` as a parameter type to match the updated `id` field type in `Feedback` class.",
+      "end_line": 21,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 21,
+      "suggested_change": "public Feedback getFeedbackById(Long id){",
+      "warnings": []
+    },
+    {
+      "code_sample": "e.setId(rs.getInt(1));",
+      "description": "Use `rs.getLong(1)` to retrieve the `id` column as a `Long` value.",
+      "end_line": 31,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 31,
+      "suggested_change": "e.setId(rs.getLong(1));",
+      "warnings": []
+    },
+    {
+      "code_sample": "e.setDateCreated(rs.getString(6));",
+      "description": "Use `rs.getTimestamp(6)` to retrieve the `date_created` column as a `Timestamp` value.",
+      "end_line": 35,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/FeedbackDao.java",
+      "start_line": 35,
+      "suggested_change": "e.setDateCreated(rs.getTimestamp(6));",
+      "warnings": []
+    }
+  ],
+  [
+    {
+      "code_sample": "import java.sql.ResultSet;    \nimport java.sql.SQLException;    \nimport java.util.List;    \nimport org.springframework.jdbc.core.BeanPropertyRowMapper;    \nimport org.springframework.jdbc.core.JdbcTemplate;    \nimport org.springframework.jdbc.core.RowMapper;",
+      "description": "Replace `JdbcTemplate` import with `NamedParameterJdbcTemplate` to use named parameters for SQL queries.",
+      "end_line": 7,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 2,
+      "suggested_change": "import java.sql.ResultSet;    \nimport java.sql.SQLException;    \nimport java.util.List;    \nimport org.springframework.jdbc.core.BeanPropertyRowMapper;    \nimport org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;    \nimport org.springframework.jdbc.core.RowMapper;",
+      "warnings": []
+    },
+    {
+      "code_sample": "JdbcTemplate template;    ",
+      "description": "Change the type of `template` from `JdbcTemplate` to `NamedParameterJdbcTemplate`.",
+      "end_line": 9,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 9,
       "suggested_change": "NamedParameterJdbcTemplate template;",
       "warnings": []
     },
     {
       "code_sample": "public void setTemplate(JdbcTemplate template) {    ",
-      "description": "Update the `setTemplate` method to accept a `NamedParameterJdbcTemplate`.",
-      "end_line": 10,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 10,
+      "description": "Update the `setTemplate` method to accept a `NamedParameterJdbcTemplate` object.",
+      "end_line": 11,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 11,
       "suggested_change": "public void setTemplate(NamedParameterJdbcTemplate template) {    ",
       "warnings": []
     },
     {
-      "code_sample": "String sql=\"insert into employee(name, salary, department) values('\" + p.getName() + \"',\"+p.getSalary()+\",'\" + p.getdepartment() + \"')\";    ",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities.",
-      "end_line": 14,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 14,
-      "suggested_change": "String sql = \"INSERT INTO employee(name, salary, department) VALUES (:name, :salary, :department)\";\n    Map<String, Object> params = new HashMap<>();\n    params.put(\"name\", p.getName());\n    params.put(\"salary\", p.getSalary());\n    params.put(\"department\", p.getdepartment());",
-      "warnings": []
-    },
-    {
-      "code_sample": "return template.update(sql);    ",
-      "description": "Use `NamedParameterJdbcTemplate.update` with the SQL query and parameters.",
+      "code_sample": "String sql=\"insert into purchase_detail(name, phone, books, quantity, total_price) values('\" + p.getName() + \"', '\" + p.getPhone() + \"', '\" + p.getBooks() + \"',  \" + p.getQuantity() + \", \" + p.getTotalPrice() + \")\";    \n\t    return template.update(sql);    ",
+      "description": "Use named parameters with `NamedParameterJdbcTemplate` to prevent SQL injection vulnerabilities. \n\nAlso, since `p.getBooks()` now returns a `String[]`, it's concatenated into a single string using \",\" as a delimiter. You might want to reconsider how books are stored in your database schema for better efficiency.",
       "end_line": 15,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 15,
-      "suggested_change": "return template.update(sql, params);",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 14,
+      "suggested_change": "String sql = \"insert into purchase_detail(name, phone, books, quantity, total_price) values(:name, :phone, :books, :quantity, :totalPrice)\";\n        MapSqlParameterSource params = new MapSqlParameterSource();\n        params.addValue(\"name\", p.getName());\n        params.addValue(\"phone\", p.getPhone());\n        params.addValue(\"books\", String.join(\",\", p.getBooks())); // Assuming books is now a String[]\n        params.addValue(\"quantity\", p.getQuantity());\n        params.addValue(\"totalPrice\", p.getTotalPrice());\n        return template.update(sql, params);",
       "warnings": []
     },
     {
-      "code_sample": "String sql=\"update employee set name='\" + p.getName() + \"', salary=\" + p.getSalary() + \",department='\" + p.getdepartment() + \"' where id=\" + p.getId() + \"\\\"\";    ",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities.",
+      "code_sample": "String sql=\"update book set name='\" + p.getName() + \"', phone='\" + p.getPhone() + \"', books='\" + p.getBooks() + \"', quantity=\" + p.getQuantity() + \", total_price=\" + p.getTotalPrice() + \" \";    \n\t    return template.update(sql);",
+      "description": "Use named parameters for the update statement to prevent SQL injection.",
       "end_line": 18,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 18,
-      "suggested_change": "String sql = \"UPDATE employee SET name=:name, salary=:salary, department=:department WHERE id=:id\";\n    Map<String, Object> params = new HashMap<>();\n    params.put(\"name\", p.getName());\n    params.put(\"salary\", p.getSalary());\n    params.put(\"department\", p.getdepartment());\n    params.put(\"id\", p.getId());",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 17,
+      "suggested_change": "String sql = \"update book set name=:name, phone=:phone, books=:books, quantity=:quantity, total_price=:totalPrice\";\n        MapSqlParameterSource params = new MapSqlParameterSource();\n        params.addValue(\"name\", p.getName());\n        params.addValue(\"phone\", p.getPhone());\n        params.addValue(\"books\", String.join(\",\", p.getBooks()));\n        params.addValue(\"quantity\", p.getQuantity());\n        params.addValue(\"totalPrice\", p.getTotalPrice());\n        return template.update(sql, params);",
       "warnings": []
     },
     {
-      "code_sample": "return template.update(sql);    ",
-      "description": "Use `NamedParameterJdbcTemplate.update` with the SQL query and parameters.",
-      "end_line": 19,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 19,
-      "suggested_change": "return template.update(sql, params);",
+      "code_sample": "String sql=\"delete from purchase_detail where id=\" + id + \"\";    \n\t    return template.update(sql);",
+      "description": "Use named parameters for the delete statement to prevent SQL injection.",
+      "end_line": 21,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 20,
+      "suggested_change": "String sql = \"delete from purchase_detail where id=:id\";\n        MapSqlParameterSource params = new MapSqlParameterSource();\n        params.addValue(\"id\", id);\n        return template.update(sql, params);",
       "warnings": []
     },
     {
-      "code_sample": "String sql=\"delete from employee where id=\" + id + \"\\\"\";    ",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities.",
-      "end_line": 22,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 22,
-      "suggested_change": "String sql = \"DELETE FROM employee WHERE id=:id\";\n    Map<String, Object> params = new HashMap<>();\n    params.put(\"id\", id);",
-      "warnings": []
-    },
-    {
-      "code_sample": "return template.update(sql);    ",
-      "description": "Use `NamedParameterJdbcTemplate.update` with the SQL query and parameters.",
-      "end_line": 23,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
+      "code_sample": "String sql=\"select * from purchase_detail where id=?\";    \n\t    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper<Purchase>(Purchase.class));",
+      "description": "Use named parameters for selecting a purchase by ID.",
+      "end_line": 24,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
       "start_line": 23,
-      "suggested_change": "return template.update(sql, params);",
+      "suggested_change": "String sql = \"select * from purchase_detail where id=:id\";\n        MapSqlParameterSource params = new MapSqlParameterSource();\n        params.addValue(\"id\", id);\n        return template.queryForObject(sql, params, new BeanPropertyRowMapper<Purchase>(Purchase.class));",
       "warnings": []
     },
     {
-      "code_sample": "String sql=\"select * from employee where id=?\";    \n    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper<Emp>(Emp.class));",
-      "description": "Use parameterized query to prevent SQL injection vulnerabilities.",
-      "end_line": 27,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 26,
-      "suggested_change": "String sql = \"SELECT * FROM employee WHERE id=:id\";\n    Map<String, Object> params = new HashMap<>();\n    params.put(\"id\", id);\n    return template.queryForObject(sql, params, new BeanPropertyRowMapper<>(Emp.class));",
-      "warnings": []
-    },
-    {
-      "code_sample": "e.setId(rs.getInt(1));",
-      "description": "Cloud Spanner uses `Long` for primary key.",
-      "end_line": 34,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 34,
-      "suggested_change": "e.setId(rs.getLong(1));",
-      "warnings": []
-    },
-    {
-      "code_sample": "e.setSalary(rs.getFloat(3));",
-      "description": "Cloud Spanner uses `Double` for floating-point numbers.",
-      "end_line": 36,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/EmpDao.java",
-      "start_line": 36,
-      "suggested_change": "e.setSalary(rs.getDouble(3));",
-      "warnings": []
-    }
-  ],
-  [
-    {
-      "code_sample": "import java.sql.ResultSet;    ",
-      "description": "Replace `java.sql.ResultSet` with `com.google.cloud.spanner.ResultSet` to use the Cloud Spanner specific result set.",
-      "end_line": 2,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 2,
-      "suggested_change": "import com.google.cloud.spanner.ResultSet;",
-      "warnings": []
-    },
-    {
-      "code_sample": "import org.springframework.jdbc.core.JdbcTemplate;",
-      "description": "Replace `JdbcTemplate` with `NamedParameterJdbcTemplate` to allow for named parameters in SQL queries, which helps prevent SQL injection vulnerabilities.",
-      "end_line": 5,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 5,
-      "suggested_change": "import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;",
-      "warnings": []
-    },
-    {
-      "code_sample": "JdbcTemplate template;",
-      "description": "Change the type of `template` from `JdbcTemplate` to `NamedParameterJdbcTemplate` to use named parameters.",
-      "end_line": 8,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 8,
-      "suggested_change": "NamedParameterJdbcTemplate template;",
-      "warnings": []
-    },
-    {
-      "code_sample": "public void setTemplate(JdbcTemplate template) {",
-      "description": "Update the `setTemplate` method to accept a `NamedParameterJdbcTemplate` object.",
-      "end_line": 10,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 10,
-      "suggested_change": "public void setTemplate(NamedParameterJdbcTemplate template) {",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"insert into book(title, author, genre, description, copy, price) values('\" + p.getTitle() + \"', '\" + p.getAuthor() + \"', '\" + p.getGenre() + \"',  '\" + p.getDescription() + \"',  \" + p.getCopy() + \", \" + p.getPrice() + \")\";    \n\t    return template.update(sql);",
-      "description": "Use named parameters with `MapSqlParameterSource` to avoid SQL injection vulnerabilities and improve readability.",
-      "end_line": 15,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 14,
-      "suggested_change": "String sql = \"insert into book(title, author, genre, description, copy, price) values(:title, :author, :genre, :description, :copy, :price)\";\n\t    MapSqlParameterSource params = new MapSqlParameterSource();\n\t    params.addValue(\"title\", p.getTitle());\n\t    params.addValue(\"author\", p.getAuthor());\n\t    params.addValue(\"genre\", p.getGenre());\n\t    params.addValue(\"description\", p.getDescription());\n\t    params.addValue(\"copy\", p.getCopy());\n\t    params.addValue(\"price\", p.getPrice());\n\t    return template.update(sql, params);",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"update book set title='\" + p.getTitle() + \"', author='\" + p.getAuthor() + \"', genre='\" + p.getGenre() + \"', description='\" + p.getDescription() + \"', copy=\" + p.getCopy() + \", price=\" + p.getPrice() + \" where id=\" + p.getId() + \" \";",
-      "description": "Use named parameters to prevent SQL injection vulnerabilities.",
-      "end_line": 18,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 18,
-      "suggested_change": "String sql = \"update book set title=:title, author=:author, genre=:genre, description=:description, copy=:copy, price=:price where id=:id\";",
-      "warnings": []
-    },
-    {
-      "code_sample": "return template.update(sql);",
-      "description": "Pass SQL parameters using `MapSqlParameterSource` to prevent SQL injection vulnerabilities.",
-      "end_line": 19,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 19,
-      "suggested_change": "MapSqlParameterSource params = new MapSqlParameterSource();\n\t    params.addValue(\"title\", p.getTitle());\n\t    params.addValue(\"author\", p.getAuthor());\n\t    params.addValue(\"genre\", p.getGenre());\n\t    params.addValue(\"description\", p.getDescription());\n\t    params.addValue(\"copy\", p.getCopy());\n\t    params.addValue(\"price\", p.getPrice());\n\t    params.addValue(\"id\", p.getId());\n\t    return template.update(sql, params);",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"delete from book where id=\" + id + \" \";    \n\t    return template.update(sql);",
-      "description": "Use named parameters and `MapSqlParameterSource` to pass the 'id' parameter safely.",
-      "end_line": 23,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 22,
-      "suggested_change": "String sql = \"delete from book where id=:id\";\n\t    MapSqlParameterSource params = new MapSqlParameterSource();\n\t    params.addValue(\"id\", id);\n\t    return template.update(sql, params);",
-      "warnings": []
-    },
-    {
-      "code_sample": "String sql=\"select * from book where id=?;    \n\t    return template.queryForObject(sql, new Object[]{id},new BeanPropertyRowMapper<Book>(Book.class));",
-      "description": "Use named parameters with `MapSqlParameterSource` to pass the 'id' parameter safely.",
-      "end_line": 27,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 26,
-      "suggested_change": "String sql = \"select * from book where id=:id\";\n\t    MapSqlParameterSource params = new MapSqlParameterSource();\n\t    params.addValue(\"id\", id);\n\t    return template.queryForObject(sql, params, new BeanPropertyRowMapper<Book>(Book.class));",
-      "warnings": []
-    },
-    {
-      "code_sample": "e.setId(rs.getInt(1));",
-      "description": "Update the `setId` method call to use `getLong` to retrieve the id value as a `Long`.",
-      "end_line": 33,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 33,
-      "suggested_change": "e.setId(rs.getLong(1));",
-      "warnings": []
-    },
-    {
-      "code_sample": "e.setCopy(rs.getInt(7));",
-      "description": "Cloud Spanner treats all integer values as `long`, so use `getLong` to retrieve the copy value.",
+      "code_sample": "return template.query(\"select * from purchase_detail\",new RowMapper<Purchase>(){    \n\t        public Purchase mapRow(ResultSet rs, int row) throws SQLException {    \n\t        \tPurchase e = new Purchase();    \n\t            e.setId(rs.getInt(1));    \n\t            e.setName(rs.getString(2));    \n\t            e.setPhone(rs.getString(3));      \n\t            e.setBooks(rs.getString(4)); \n\t            e.setQuantity(rs.getInt(5));        \n\t            e.setTotalPrice(rs.getFloat(6));    \n\t            e.setDatePurchased(rs.getString(4)); \n\t            return e;    \n\t        }    \n\t    });",
+      "description": "Use named parameters and column names for fetching all purchases to improve readability and maintainability. \n\nThe `books` field is populated by splitting the retrieved string based on the \",\" delimiter. You might need to adjust this logic based on your actual database schema.",
       "end_line": 37,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/BookDao.java",
-      "start_line": 37,
-      "suggested_change": "e.setCopy(rs.getLong(7));",
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/dao/PurchaseDao.java",
+      "start_line": 26,
+      "suggested_change": "return template.query(\"select * from purchase_detail\", new RowMapper<Purchase>() {\n            @Override\n            public Purchase mapRow(ResultSet rs, int row) throws SQLException {\n                Purchase e = new Purchase();\n                e.setId(rs.getInt(\"id\"));\n                e.setName(rs.getString(\"name\"));\n                e.setPhone(rs.getString(\"phone\"));\n                e.setBooks(rs.getString(\"books\").split(\",\")); // Assuming books is stored as comma-separated string\n                e.setQuantity(rs.getInt(\"quantity\"));\n                e.setTotalPrice(rs.getFloat(\"total_price\"));\n                e.setDatePurchased(rs.getString(\"date_purchased\")); // Assuming column name is \"date_purchased\"\n                return e;\n            }\n        });",
       "warnings": []
     }
   ],
-  [
-    {
-      "code_sample": "@RequestMapping(value=\"/deletefeedback/{id}\",method = RequestMethod.GET)    \n    public String delete(@PathVariable int id){",
-      "description": "Changed parameter type from int to Long to match the Feedback class's getId method and support Cloud Spanner's Long primary key requirement.",
-      "end_line": 61,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/FeedbackController.java",
-      "start_line": 61,
-      "suggested_change": "@RequestMapping(value=\"/deletefeedback/{id}\",method = RequestMethod.GET)    \n    public String delete(@PathVariable Long id){",
-      "warnings": []
-    }
-  ],
-  [
-    {
-      "code_sample": "@RequestMapping(value=\"/deletepurchase/{id}\",method = RequestMethod.GET)    \n    public String delete(@PathVariable int id){    \n        dao.delete(id);    \n        return \"redirect:/purchase/viewpurchases\";    \n    }",
-      "description": "Cloud Spanner doesn't support deleting rows by just ID. You need to pass the complete object to the delete method. Added code to fetch the purchase object by ID and then pass it to the delete method in DAO.",
-      "end_line": 56,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/PurchaseController.java",
-      "start_line": 52,
-      "suggested_change": "@RequestMapping(value=\"/deletepurchase/{id}\",method = RequestMethod.GET)    \n    public String delete(@PathVariable int id){    \n        Purchase purchase = new Purchase();\n        purchase.setId(id);\n        dao.delete(purchase);    \n        return \"redirect:/purchase/viewpurchases\";    \n    }",
-      "warnings": []
-    }
-  ],
+  [],
+  [],
+  [],
   [
     {
       "code_sample": "@RequestMapping(value=\"/editemp/{id}\")",
       "description": "Added `method = RequestMethod.GET` to explicitly specify the HTTP method for this request mapping.",
-      "end_line": 53,
+      "end_line": 50,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/EmpController.java",
-      "start_line": 53,
+      "start_line": 50,
       "suggested_change": "@RequestMapping(value=\"/editemp/{id}\", method = RequestMethod.GET)",
       "warnings": []
     },
     {
-      "code_sample": "public String edit(@PathVariable int id, Model m){",
-      "description": "Changed parameter type from `int` to `Long` to align with Cloud Spanner's use of `Long` for primary keys.",
-      "end_line": 54,
+      "code_sample": "@PathVariable int id",
+      "description": "Changed parameter type from `int` to `String` to align with the changes in `Emp` class.",
+      "end_line": 51,
       "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/EmpController.java",
-      "start_line": 54,
-      "suggested_change": "public String edit(@PathVariable Long id, Model m){",
+      "start_line": 51,
+      "suggested_change": "@PathVariable String id",
+      "warnings": []
+    },
+    {
+      "code_sample": "@PathVariable int id",
+      "description": "Changed parameter type from `int` to `String` to align with the changes in `Emp` class.",
+      "end_line": 65,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/EmpController.java",
+      "start_line": 65,
+      "suggested_change": "@PathVariable String id",
       "warnings": []
     }
   ],
   [
     {
-      "code_sample": "@RequestMapping(value=\"/editbook/{id}\")",
-      "description": "Added `method = RequestMethod.GET` to explicitly specify the HTTP method for the endpoint.",
-      "end_line": 43,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/BookController.java",
-      "start_line": 43,
-      "suggested_change": "@RequestMapping(value=\"/editbook/{id}\", method = RequestMethod.GET)",
+      "code_sample": "@PathVariable int id",
+      "description": "Change the data type of the `id` path variable from `int` to `Long` to match the updated `id` field type in the `Feedback` class.",
+      "end_line": 52,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/FeedbackController.java",
+      "start_line": 52,
+      "suggested_change": "@PathVariable Long id",
+      "warnings": []
+    }
+  ],
+  [
+    {
+      "code_sample": "import java.util.List;",
+      "description": "Import necessary classes for KeySet and Pageable.",
+      "end_line": 2,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/PurchaseController.java",
+      "start_line": 2,
+      "suggested_change": "import com.google.cloud.spanner.KeySet;\nimport org.springframework.data.domain.Pageable;\nimport java.util.List;",
       "warnings": []
     },
     {
-      "code_sample": "public String edit(@PathVariable int id, Model m){",
-      "description": "Updated the `id` parameter type from `int` to `Long` to align with changes in the `Book` class and Cloud Spanner's data types.",
-      "end_line": 44,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/BookController.java",
-      "start_line": 44,
-      "suggested_change": "public String edit(@PathVariable Long id, Model m){",
-      "warnings": []
-    },
-    {
-      "code_sample": "public String delete(@PathVariable int id){",
-      "description": "Updated the `id` parameter type from `int` to `Long` to align with changes in the `Book` class and Cloud Spanner's data types.",
-      "end_line": 57,
-      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/BookController.java",
-      "start_line": 57,
-      "suggested_change": "public String delete(@PathVariable Long id){",
-      "warnings": []
+      "code_sample": "List<Purchase> list = dao.getPurchases();",
+      "description": "Cloud Spanner doesn't support full table scans for listing operations. Use Pageable for better performance.",
+      "end_line": 32,
+      "filename": "/usr/local/google/home/gauravpurohit/ai/sample/spring-mvc-bookstore/src/main/java/com/bookstore/controllers/PurchaseController.java",
+      "start_line": 32,
+      "suggested_change": "List<Purchase> list = dao.getPurchases(Pageable.unpaged()); // Use Pageable for listing",
+      "warnings": [
+        "Fetching all purchases at once can be inefficient for large datasets. Consider adding pagination or filtering to limit the number of results."
+      ]
     }
   ]
 ]
