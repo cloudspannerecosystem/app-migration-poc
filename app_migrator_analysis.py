@@ -263,32 +263,35 @@ class MigrationSummarizer:
         response = await self._llm.ainvoke(prompt)
         
         response_parsed = await self.json_multishot(prompt, response)
-        res = response_parsed
-
+    
+        if isinstance(response_parsed, dict):
+            response_parsed = [response_parsed]
+        
         file_analysis = []
         method_signatures = []
 
-        file_modifications = res.get('file_modifications', [])
-        methods = res.get('method_signature_changes', [])
+        for res in response_parsed:
+            file_modifications = res.get('file_modifications', [])
+            methods = res.get('method_signature_changes', [])
 
-        for mod in file_modifications:
-            file_analysis.append(FileAnalysis(
-                filename=filepath,
-                code_sample=mod.get('code_sample'),
-                start_line=int(mod.get('start_line', '-1')),
-                end_line=int(mod.get('end_line', '-1')),
-                suggested_change=mod.get('suggested_change'),
-                description=mod.get('description'),
-                warnings=mod.get('warnings', []),
-            ))
+            for mod in file_modifications:
+                file_analysis.append(FileAnalysis(
+                    filename=filepath,
+                    code_sample=mod.get('code_sample'),
+                    start_line=int(mod.get('start_line', '-1')),
+                    end_line=int(mod.get('end_line', '-1')),
+                    suggested_change=mod.get('suggested_change'),
+                    description=mod.get('description'),
+                    warnings=mod.get('warnings', []),
+                ))
 
-        for method in methods:
-            method_signatures.append(MethodSignatureChange(
-                filename=filepath,
-                original_signature=method.get('original_signature'),
-                new_signature=method.get('new_signature'),
-                explanation=method.get('explanation'),
-            ))
+            for method in methods:
+                method_signatures.append(MethodSignatureChange(
+                    filename=filepath,
+                    original_signature=method.get('original_signature'),
+                    new_signature=method.get('new_signature'),
+                    explanation=method.get('explanation'),
+                ))
 
         return file_analysis, method_signatures
     
