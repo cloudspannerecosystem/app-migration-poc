@@ -8,3 +8,4 @@ ipykernel
 matplotlib
 jinja2
 aiofiles
+langchain_google_vertexai

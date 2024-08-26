@@ -1,108 +1,151 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Cloud Spanner Migration Report</title>
+<title>Migration Report for {{ report_data.appName }}</title>
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 <style>
-body {
-  font-family: sans-serif;
-}
-
-h1, h2, h3 {
-  margin-top: 1em;
-}
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin-top: 0.5em;
-}
-
-th, td {
-  border: 1px solid black;
-  padding: 0.5em;
-}
-
-code {
-  background-color: #f0f0f0;
-  padding: 0.2em;
-}
-
-.smaller-font {
-  font-size: x-small;
-}
-
+body { font-family: 'Arial', sans-serif; line-height: 1.6; margin: 20px; }
+h1, h2, h3, h4 { color: #333; }
+h1 { text-align: center; margin-bottom: 30px; }
+h2 { border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+ul { list-style: disc; padding-left: 20px; margin-bottom: 20px; }
+table { border-collapse: collapse; width: 100%; margin-bottom: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+th { background-color: #f0f0f0; font-weight: bold; }
+code { background-color: #f5f5f5; padding: 2px 4px; border-radius: 4px; }
+pre code { display: block; padding: 10px; overflow-x: auto; } 
+.task { margin-bottom: 30px; }
+.task h3 { margin-top: 0; }
 </style>
 </head>
 <body>
 
-<h1>Spanner Migration Report</h1>
+<h1>Migration Report for {{ report_data.appName }}</h1>
 
-<h2>Introduction</h2>
+<section>
+<h2>Executive Summary</h2>
+<ul>
+<li>{{ report_data.sourceTargetAssessment }}</li>
+<li>{{ report_data.riskAssessmentMitigation }}</li>
+<li>{{ report_data.effortEstimation }}</li>
+</ul>
+</section>
 
-<p>{{ introduction }}</p>
+<section>
+<h2>Developer Summary</h2>
+<p>{{ report_data.developerSummary }}</p>
+</section>
 
-<h2>Issue Categories</h2>
+<section>
+<h2>App Statistics</h2>
+<ul>
+<li>Application Size: {{ report_data.appSize }}</li>
+<li>Programming Languages: {{ report_data.programmingLanguages }}</li>
+<li>Current Supported DBMS: {{ report_data.currentDBMS }}</li>
+<li>Client Drivers Used: {{ report_data.clientDrivers }}</li>
+<li>ORMs/Toolkits Detected: {{ report_data.ormsToolkits }}</li>
+<li>Additional Notes: {{ report_data.additionalNotes }}</li>
+</ul>
+</section>
 
-<p>We've identified the following categories of issues:</p>
+<section>
+<h2>Highlights</h2>
+<p>{{ report_data.migrationComplexity }}</p>
+</section>
 
-<table>
-  <thead>
-    <tr>
-      <th>Category</th>
-      <th>Description</th>
-      <th>Complexity</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in categories %}
-    <tr>
-        <td>{{ row.Category }}</td>
-        <td>
-          <ul>
-              {% for descp in row.Description %}
-                  <li>{{ descp }}</li>
-              {% endfor %}
-          </ul>
-        </td>
-        <td>{{ row.Complexity }}</td>
-    </tr>
+<section>
+<h2>Code Impact</h2>
+<ul>
+{% for item in report_data.codeImpact %}
+<li>{{ item }}</li>
 {% endfor %}
-  </tbody>
+</ul>
+</section>
+
+<section>
+<h2>Major Efforts</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Task Shortname</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+{% for effort in report_data.majorEfforts %}
+<tr>
+<td>{{ effort.category }}</td>
+<td>{{ effort.taskShortname }}</td>
+<td>{{ effort.description }}</td>
+</tr>
+{% endfor %}
+</tbody>
 </table>
+</section>
 
-<h2>Detailed Changes</h2>
-
-<p>The following table provides a detailed breakdown of the required changes:</p>
-
+<section>
+<h2>Minor Efforts</h2>
 <table>
-  <thead>
-    <tr>
-      <th>File</th>
-      <th>Lines</th>
-      <th>Original Code</th>
-      <th>Suggested Code</th>
-      <th>Description</th>
-      <th>Warnings</th>
-    </tr>
-  </thead>
-  <tbody class="smaller-font">
-    {% for row in summaries %}
-    <tr>
-        <td>{{ row.filename }}</td>
-        <td>{{ row.start_line }} - {{ row.end_line }}</td>
-        <td>{{ row.code_sample }}</td>
-        <td>{{ row.suggested_change }}</td>
-        <td>{{ row.description }}</td>
-        <td>
-          <ul>
-              {% for warn in row.warnings %}
-                  <li>{{ warn }}</li>
-              {% endfor %}
-          </ul>
-        </td>
-        <td>{{ row.Complexity }}</td>
-    </tr>
+<thead>
+<tr>
+<th>Category</th>
+<th>Task Shortname</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+{% for effort in report_data.minorEfforts %}
+<tr>
+<td>{{ effort.category }}</td>
+<td>{{ effort.taskShortname }}</td>
+<td>{{ effort.description }}</td>
+</tr>
 {% endfor %}
-  </tbody>
-<table>
-  
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>Notes</h2>
+<ul>
+{% for note in report_data.notes %}
+<li>{{ note }}</li>
+{% endfor %}
+</ul>
+</section>
+
+<section>
+<h2>Tasks</h2>
+{% for task in report_data.tasks %}
+<div class="task">
+<h3>{{ task.taskShortname }}</h3>
+<p>Description: {{ task.description }}</p>
+<p>Affected Files:</p>
+<ul>
+{% for file in task.affectedFiles %}
+<li>{{ file }}</li>
+{% endfor %}
+</ul> 
+{% if task.exampleCodeChanges %}
+<h4>Example Code Changes:</h4>
+{% for change in task.exampleCodeChanges %}
+<p>{{ change.description }}</p>
+<pre><code class="language-diff">{{ change.codeDiff }}</code></pre>
+<p>Similar changes might be needed in:</p>
+<ul>
+{% for location in change.similarChangeLocations %}
+<li>{{ location }}</li>
+{% endfor %}
+</ul>
+{% endfor %}
+{% endif %}
+</div>
+{% endfor %}
+</section>
+
+<script>hljs.highlightAll();</script>
+
+</body>
+</html>

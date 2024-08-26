@@ -14,16 +14,12 @@
 
 from utils import list_files, replace_and_save_html # type: ignore
 import os
-from langchain_google_genai import (
-    ChatGoogleGenerativeAI,
-    HarmBlockThreshold,
-    HarmCategory,
-) # type: ignore
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 import dataclasses
 import json
 from dependency_analyzer.java_analyze import JavaAnalyzer
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from langchain_google_vertexai import VertexAI
 import asyncio
 import aiofiles
 import logging
@@ -73,7 +69,7 @@ class MethodSignatureChange:
     explanation: str
 
 class MigrationSummarizer:
-    def __init__(self, google_generative_ai_api_key: Optional[str] = None):
+    def __init__(self, google_generative_ai_api_key: Optional[str] = None, gemini_version = "gemini-1.5-flash-001"):
         """
         Initializes the MigrationSummarizer with an optional Google Generative AI API key.
         Sets up the language model for generating migration suggestions.
@@ -83,12 +79,7 @@ class MigrationSummarizer:
         """
         if google_generative_ai_api_key is not None:
             os.environ["GOOGLE_API_KEY"] = google_generative_ai_api_key
-        self._llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-pro",
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                },
-            )
+        self._llm = VertexAI(model_name=gemini_version)
 
     async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
@@ -111,7 +102,7 @@ class MigrationSummarizer:
 
         prompt = f"""
             You are a Cloud Spanner expert. You are working on migrating an application
-            from PostgreSQL JDBC, Hibernate & Spring Data JPA to Spanner with PostgreSQL dialect with JDBC, Hibernate & Spring Data JPA. Review the following file and identify
+            from MySQL JDBC to Spanner JDBC and not Java Client library. Review the following file and identify
             how it will need to be modified to work with Cloud Spanner. The code provided contains blank lines, comments, documentation, and other non-executable elements.
             You can refer function docs and comments to understand more about it and then suggest the chagnes. 
 
@@ -158,10 +149,103 @@ class MigrationSummarizer:
             ]
             ```
 
-            All generated results values should be single-line strings. Please only suggest relevant changes and don't hallucinate.
+            **Instructions:**
+            1. All generated results values should be single-line strings. Please only suggest relevant changes and don't hallucinate.
+            2. If the code contains any known Spanner anti-patterns, describe the problem and any known workarounds under "warnings".
+            3. Feel free to write code in applicaiton layer if some functioanlity can't be supported in database layer.
+            4. Make sure return JSON is correct, verify it so we don't get error parsing it.
+            5. Strictly capture the larger code snippet to modify and provide their changes in one object and provide a cummilative desciption of change instead of providing it line by line.
+            6. You need to migrte to Spanner JDBC and not Spanner Client Library.
 
-            If the code contains any known Spanner anti-patterns, describe the problem and
-            any known workarounds under "warnings".
+
+            *****Older Schema****
+            `````````````
+            CREATE TABLE Account (
+            AccountId INT NOT NULL AUTO_INCREMENT,
+            CreationTimestamp DATETIME(6) NOT NULL DEFAULT NOW(6),
+            AccountStatus INT NOT NULL,
+            Balance NUMERIC(18,2) NOT NULL,
+            PRIMARY KEY (AccountId)
+            );
+
+            CREATE TABLE TransactionHistory (
+            EventId BIGINT NOT NULL AUTO_INCREMENT,
+            AccountId INT NOT NULL,
+            EventTimestamp DATETIME(6) NOT NULL DEFAULT NOW(6),
+            IsCredit BOOL NOT NULL,
+            Amount NUMERIC(18,2) NOT NULL,
+            Description TEXT,
+            PRIMARY KEY (EventId)
+            );
+
+            CREATE TABLE Customer (
+            CustomerId INT NOT NULL AUTO_INCREMENT,
+            Name TEXT NOT NULL,
+            Address TEXT NOT NULL,
+            PRIMARY KEY (CustomerId)
+            );
+
+            CREATE TABLE CustomerRole (
+            CustomerId INT NOT NULL,
+            RoleId INT NOT NULL AUTO_INCREMENT,
+            Role TEXT NOT NULL,
+            AccountId INT NOT NULL,
+            CONSTRAINT FK_AccountCustomerRole FOREIGN KEY (AccountId)
+                REFERENCES Account(AccountId),
+            PRIMARY KEY (CustomerId, RoleId),
+            KEY (RoleId)
+            );
+
+            CREATE INDEX CustomerRoleByAccount ON CustomerRole(AccountId, CustomerId);
+
+            CREATE TABLE SampleApp (
+            Id BIGINT NOT NULL AUTO_INCREMENT,
+            PRIMARY KEY (Id)
+            );
+
+            `````````````
+
+            *****New Schema with Spanner****
+            `````````````
+            CREATE TABLE Account (
+            AccountId BYTES(16) NOT NULL,
+            CreationTimestamp TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
+            AccountStatus INT64 NOT NULL,
+            Balance NUMERIC NOT NULL
+            ) PRIMARY KEY (AccountId);
+
+            CREATE TABLE TransactionHistory (
+            AccountId BYTES(16) NOT NULL,
+            EventTimestamp TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
+            IsCredit BOOL NOT NULL,
+            Amount NUMERIC NOT NULL,
+            Description STRING(MAX)
+            ) PRIMARY KEY (AccountId, EventTimestamp DESC),
+            INTERLEAVE IN PARENT Account ON DELETE CASCADE;
+
+            CREATE TABLE Customer (
+            CustomerId BYTES(16) NOT NULL,
+            Name STRING(MAX) NOT NULL,
+            Address STRING(MAX) NOT NULL,
+            ) PRIMARY KEY (CustomerId);
+
+            CREATE TABLE CustomerRole (
+            CustomerId BYTES(16) NOT NULL,
+            RoleId BYTES(16) NOT NULL,
+            Role STRING(MAX) NOT NULL,
+            AccountId BYTES(16) NOT NULL,
+            CONSTRAINT FK_AccountCustomerRole FOREIGN KEY (AccountId)
+                REFERENCES Account(AccountId),
+            ) PRIMARY KEY (CustomerId, RoleId),
+            INTERLEAVE IN PARENT Customer ON DELETE CASCADE;
+
+            CREATE INDEX CustomerRoleByAccount ON CustomerRole(AccountId, CustomerId);
+
+            CREATE TABLE CloudSpannerSampleApp (
+            Id INT64 NOT NULL
+            ) PRIMARY KEY (Id)
+
+            `````````````
 
             Please analyze the following file:
             `{filepath}`
@@ -178,37 +262,37 @@ class MigrationSummarizer:
         
         response = await self._llm.ainvoke(prompt)
         
-        response_parsed = await self.json_multishot(prompt, response.content, filepath)
+        response_parsed = await self.json_multishot(prompt, response)
+        res = response_parsed
 
         file_analysis = []
         method_signatures = []
 
-        for res in response_parsed:
-            file_modifications = res.get('file_modifications', [])
-            methods = res.get('method_signature_changes', [])
+        file_modifications = res.get('file_modifications', [])
+        methods = res.get('method_signature_changes', [])
 
-            for mod in file_modifications:
-                file_analysis.append(FileAnalysis(
-                    filename=filepath,
-                    code_sample=mod.get('code_sample'),
-                    start_line=int(mod.get('start_line', '-1')),
-                    end_line=int(mod.get('end_line', '-1')),
-                    suggested_change=mod.get('suggested_change'),
-                    description=mod.get('description'),
-                    warnings=mod.get('warnings', []),
-                ))
+        for mod in file_modifications:
+            file_analysis.append(FileAnalysis(
+                filename=filepath,
+                code_sample=mod.get('code_sample'),
+                start_line=int(mod.get('start_line', '-1')),
+                end_line=int(mod.get('end_line', '-1')),
+                suggested_change=mod.get('suggested_change'),
+                description=mod.get('description'),
+                warnings=mod.get('warnings', []),
+            ))
 
-            for method in methods:
-                method_signatures.append(MethodSignatureChange(
-                    filename=filepath,
-                    original_signature=method.get('original_signature'),
-                    new_signature=method.get('new_signature'),
-                    explanation=method.get('explanation'),
-                ))
+        for method in methods:
+            method_signatures.append(MethodSignatureChange(
+                filename=filepath,
+                original_signature=method.get('original_signature'),
+                new_signature=method.get('new_signature'),
+                explanation=method.get('explanation'),
+            ))
 
         return file_analysis, method_signatures
     
-    async def json_multishot(self, original_prompt: str, response: str,  filepath: str, retries: int = 3) -> List[Dict[str, Union[str, List]]]:
+    async def json_multishot(self, original_prompt: str, response: str, retries: int = 3, identifier = ''):
         """
         Attempts to correct and parse JSON responses from the language model multiple times if errors occur.
 
@@ -218,7 +302,7 @@ class MigrationSummarizer:
             retries (int): The number of retries for parsing the JSON response.
 
         Returns:
-            List[Dict[str, Union[str, List]]]: A list of parsed JSON objects.
+            Dict: A parsed JSON object
         """
         prompt_template = """
             The following generated JSON value failed to parse, it contained the following
@@ -240,33 +324,33 @@ class MigrationSummarizer:
         for i in range(retries):
             response_text = response.strip()
             if response_text == '':
-                logger.info ('No Changes for file: %s', filepath)
+                logger.info ('No Changes for file: %s', identifier)
                 return []
             if response_text.startswith('```json\n') and response_text.endswith('\n```'):
                 response_text = response_text[8:-4]
                 if response_text == '':
-                    logger.info ('No Changes for file but json: %s', filepath)
+                    logger.info ('No Changes for file but json: %s', identifier)
                     return []
             try:
                 result = json.loads(response_text)
                 if isinstance(result, dict):
-                    return [result]
+                    return result
 
-                error = 'The output is not in the desired format, top level object is a list instead of dictionary'
+                error = 'The output is not in the desired format, top level object is not dictionary'
             
             except json.decoder.JSONDecodeError as e:
                 error = str(e)
 
-            logger.warning ('Error: %s %s %s', error, filepath, response_text)
+            logger.warning ('Error: %s %s %s', error, identifier, response_text)
             response = await self._llm.ainvoke(prompt_template.format(original_prompt, response_text, error))
-            response = response.content
+            response = response
         
         
         if response == '':
-            logger.info ('No Changes for file last: %s', filepath)
+            logger.info ('No Changes for file last: %s', identifier)
             return []
 
-        logger.error('Not Done: %s %s', filepath, response)
+        logger.error('Not Done: %s %s', identifier, response)
         return []
 
     async def analyze_project(self, directory: str, max_threads = 2, batch_size=100) -> List[List[FileAnalysis]]:
@@ -356,53 +440,89 @@ class MigrationSummarizer:
 
         return summaries
 
-    async def summarize_report(self, summaries: List[List[FileAnalysis]], output_file: str = 'result/spanner_migration_report.html'):
-        """
-        Summarizes the analysis report for the migration project into an HTML formatted report.
-
-        Args:
-            summaries (List[List[FileAnalysis]]): The list of file analyses to be summarized.
-
-        Returns:
-            str: The HTML formatted summary report.
-        """
-        template_path: str = 'result/migration_template.html'
-        flattened_summaries = [item for sublist in summaries for item in sublist]
-        change_dicts = [change.__dict__ for change in flattened_summaries]
+    async def summarize_report(self, summaries: List[List[FileAnalysis]], output_file: str = 'spanner_migration_report.html'):
+        summaries = [item for sublist in summaries for item in sublist]
+        change_dicts = [change.__dict__ for change in summaries]
         json_analysis = json.dumps(change_dicts, indent=2)
-
+        
         prompt = f"""
-        You are a Cloud Spanner expert with deep experience migrating applications from PostgreSQL. You are reviewing an analysis of changes required to 
-        transition an application from PostgreSQL JDBC, Hibernate, and Spring Data JPA to Spanner with its PostgreSQL dialect.
+        You are a Cloud Spanner expert with deep experience migrating applications from MySQl JDBC. You are reviewing an analysis of changes required to 
+        transition an application from MySQL JDBC to Spanner JDBC.
 
         Please be focused towards migrating of complex data types and transactional handling.
 
-        **Task:**
-        1. Craft a concise introduction summarizing the overall migration effort.
-        2. Analyze the following JSON data containing change details and identify the categories of issues.
+        Analyze the following code changes and generate a migration report, you don't have to return the input data back in output:
         ```json
         {json_analysis}
+        ```
 
-        Please structure your response in the following JSON format, output should be sorted in the order of complexity from low to high.
+        Instructions:
+        1.Please make sure output is less than 5000 words.
+        2. All generated results values should be single-line strings.
+        3. Please use backslash for special charactes and not include unecessary whitespace character.
+        4. Please use backslash for backticks. Extra careful with code snippets.
+        5. Please generate the ouput in JSON format having following strucutre. 
+        ```json
         {{
-            "introduction": "<Summary of the Changes>",
-            "categories": [
+        "appName": "[App Name]",
+        "sourceTargetAssessment": "[Source & Target Database Assessment details]",
+        "riskAssessmentMitigation": "[Risk Assessment & Mitigation details]",
+        "effortEstimation": "[Effort Estimation details]",
+        "developerSummary": "[Concise paragraph about app purpose and functionality]",
+        "appSize": "[Size in MB or GB]",
+        "programmingLanguages": "[List of languages and percentages]",
+        "currentDBMS": "[Current database system(s)]",
+        "clientDrivers": "[List of client libraries/drivers]",
+        "ormsToolkits": "[ORMs or toolkits found]",
+        "additionalNotes": "[Any other observations]",
+        "migrationComplexity": "[Summary of migration complexity]",
+        "codeImpact": [
+            "[List of files/directories needing modification]"
+        ],
+        "majorEfforts": [
+            {{
+            "category": "[Category]",
+            "taskShortname": "[Task Shortname]",
+            "description": "[Executive-friendly description]"
+            }},
+            // ... more major efforts
+        ],
+        "minorEfforts": [
+            // ... similar structure as majorEfforts
+        ],
+        "notes": [
+            "[List of smaller tasks]"
+        ],
+        "tasks": [
+            {{
+            "taskShortname": "[Task Shortname]",
+            "description": "[Detailed task description]",
+            "affectedFiles": [
+                "[File 1]",
+                "[File 2]",
+                // ... more affected files
+            ],
+            "exampleCodeChanges": [
                 {{
-                    "Category": "<Category of Changes>",
-                    "Description": ["<human-readable description Point 1>", "<human-readable description Point 2>" ...],
-                    "Complexity": "<Complexity of the Issue>" 
+                "description": "[Brief change description]",
+                "codeDiff": [JSON Escaped String with proper indentation]
+                "similarChangeLocations": [
+                    "[File 1: Line Number]",
+                    "[File 2: Line Number]",
+                    // ... more locations
+                ]
                 }}
-                // ... more categories
+                // ... more examples if required
             ]
+            }},
+            // ... more tasks
+        ]
         }}
+        ```
         """
 
         response = await self._llm.ainvoke(prompt)
-        response = response.content
 
-        data = json.loads(response[8:-4])
+        response = await self.json_multishot(prompt, response, 3)
 
-        changes = [dataclasses.asdict(x) for x in flattened_summaries]
-        data['summaries'] = changes
-
-        replace_and_save_html(template_path, output_file, data)
+        replace_and_save_html('result/migration_template.html', output_file, {'report_data': response})

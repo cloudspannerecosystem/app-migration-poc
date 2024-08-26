@@ -96,15 +96,19 @@ class JavaAnalyzer:
         file_to_class = {}
         class_to_file = {}
 
-        for root, _, files in os.walk(project_dir):
+        for root, dirs, files in os.walk(project_dir):
+            dirs[:] = [d for d in dirs if not (d.startswith('.') or d.startswith('test'))]
+
             for file in files:
-                if file.endswith('.java'):
+                if file.endswith('.java') or file.endswith('.xml'):
                     file_path = os.path.join(root, file)
                     public_classes = self.find_public_classes_in_file(file_path)
+                    file_to_class[file_path] = public_classes
+                    
                     if public_classes:
-                        file_to_class[file_path] = public_classes
                         for class_name in public_classes:
                             class_to_file[class_name] = file_path
+
 
         return file_to_class, class_to_file
 
@@ -180,7 +184,8 @@ class JavaAnalyzer:
         # Add nodes for each Java file
         G.add_nodes_from(file_to_class.keys())
 
-        for root, _, files in os.walk(project_dir):
+        for root, dirs, files in os.walk(project_dir):
+            dirs[:] = [d for d in dirs if not (d.startswith('.') or d.startswith('test'))]
             for file in files:
                 if file.endswith('.java'):
                     file_path = os.path.join(root, file)
@@ -188,6 +193,7 @@ class JavaAnalyzer:
                     for class_name in used_classes:
                         if class_name in class_to_file and file_path != class_to_file[class_name]:
                             G.add_edge(file_path, class_to_file[class_name])
+
 
         return G
 
