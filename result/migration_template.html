@@ -14,7 +14,7 @@ table { border-collapse: collapse; width: 100%; margin-bottom: 20px; box-shadow:
 th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
 th { background-color: #f0f0f0; font-weight: bold; }
 code { background-color: #f5f5f5; padding: 2px 4px; border-radius: 4px; }
-pre code { display: block; padding: 10px; overflow-x: auto; } 
+pre code { display: block; padding: 10px; overflow-x: auto; } 
 .task { margin-bottom: 30px; }
 .task h3 { margin-top: 0; }
 </style>
@@ -127,12 +127,12 @@ pre code { display: block; padding: 10px; overflow-x: auto; }
 {% for file in task.affectedFiles %}
 <li>{{ file }}</li>
 {% endfor %}
-</ul> 
+</ul> 
 {% if task.exampleCodeChanges %}
 <h4>Example Code Changes:</h4>
 {% for change in task.exampleCodeChanges %}
 <p>{{ change.description }}</p>
-<pre><code class="language-diff">{{ change.codeDiff }}</code></pre>
+<pre><code class="language-java language-diff">{{ change.codeDiff }}</code></pre> 
 <p>Similar changes might be needed in:</p>
 <ul>
 {% for location in change.similarChangeLocations %}

@@ -96,6 +96,8 @@ class JavaAnalyzer:
         file_to_class = {}
         class_to_file = {}
 
+
+        print(f"Analyzing project directory: {project_dir}") 
         for root, dirs, files in os.walk(project_dir):
             dirs[:] = [d for d in dirs if not (d.startswith('.') or d.startswith('test'))]
 
@@ -109,7 +111,7 @@ class JavaAnalyzer:
                         for class_name in public_classes:
                             class_to_file[class_name] = file_path
 
-
+        print("Public class analysis complete.")
         return file_to_class, class_to_file
 
     def get_identifier(self, node, types):
@@ -184,6 +186,8 @@ class JavaAnalyzer:
         # Add nodes for each Java file
         G.add_nodes_from(file_to_class.keys())
 
+        print("Building dependency graph...")  # Added log
+
         for root, dirs, files in os.walk(project_dir):
             dirs[:] = [d for d in dirs if not (d.startswith('.') or d.startswith('test'))]
             for file in files:
@@ -194,6 +198,8 @@ class JavaAnalyzer:
                         if class_name in class_to_file and file_path != class_to_file[class_name]:
                             G.add_edge(file_path, class_to_file[class_name])
 
+
+        print("Dependency graph construction complete.") 
 
         return G
 
@@ -231,8 +237,10 @@ class JavaAnalyzer:
         
 
         edges = relax_cycles(G)
-        print ("Edges removed to relax cyles: ", len(edges))
-        
+
+        if len(edges) > 0:
+            print(f"Detected cyclic dependencies in the project. Relaxed {len(edges)} edges to ensure a valid analysis order.")
+
         sorted_tasks = list(nx.topological_sort(G))[::-1]
 
         def group_tasks_optimized(tasks, graph):
@@ -290,5 +298,7 @@ class JavaAnalyzer:
             return grouped_tasks
 
         grouped_tasks = group_tasks_optimized(sorted_tasks, G)
+
+        print("Execution order determined successfully.")
 
         return G, grouped_tasks

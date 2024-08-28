@@ -20,6 +20,7 @@ import json
 from dependency_analyzer.java_analyze import JavaAnalyzer
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_google_vertexai import VertexAI
+from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
 import asyncio
 import aiofiles
 import logging
@@ -37,7 +38,7 @@ logger.setLevel(level=logging.DEBUG)
 
 # Create a handler for console output
 # Create a file handler (optional, logs to a file)
-file_handler = logging.FileHandler('my_log_file.log')
+file_handler = logging.FileHandler('gemini_migration.log')
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter(log_format, log_datefmt))
 
@@ -79,7 +80,16 @@ class MigrationSummarizer:
         """
         if google_generative_ai_api_key is not None:
             os.environ["GOOGLE_API_KEY"] = google_generative_ai_api_key
-        self._llm = VertexAI(model_name=gemini_version)
+
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        }
+
+        self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
 
     async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
@@ -259,14 +269,14 @@ class MigrationSummarizer:
             ```
             Please also consdier how the method changes in dependent files will impact the changes in this file.
             """
-        
+
         response = await self._llm.ainvoke(prompt)
-        
-        response_parsed = await self.json_multishot(prompt, response)
-    
+
+        response_parsed = await self.json_multishot(prompt, response, 3, filepath)
+
         if isinstance(response_parsed, dict):
             response_parsed = [response_parsed]
-        
+
         file_analysis = []
         method_signatures = []
 
@@ -294,7 +304,7 @@ class MigrationSummarizer:
                 ))
 
         return file_analysis, method_signatures
-    
+
     async def json_multishot(self, original_prompt: str, response: str, retries: int = 3, identifier = ''):
         """
         Attempts to correct and parse JSON responses from the language model multiple times if errors occur.
@@ -326,43 +336,49 @@ class MigrationSummarizer:
 
         for i in range(retries):
             response_text = response.strip()
+
             if response_text == '':
-                logger.info ('No Changes for file: %s', identifier)
-                return []
+                logger.info("No changes detected for item: %s", identifier)
+                return {}  # Return an empty dictionary to indicate no changes
+
             if response_text.startswith('```json\n') and response_text.endswith('\n```'):
                 response_text = response_text[8:-4]
                 if response_text == '':
-                    logger.info ('No Changes for file but json: %s', identifier)
-                    return []
+                    logger.info("No changes detected within JSON block for item: %s", identifier)
+                    return {}
+
             try:
                 result = json.loads(response_text)
                 if isinstance(result, dict):
+                    logger.debug("Successfully parsed JSON for item: %s", identifier)
                     return result
-
-                error = 'The output is not in the desired format, top level object is not dictionary'
-            
+                else:
+                    error = "The output is not in the desired format, top-level object is not a dictionary"
             except json.decoder.JSONDecodeError as e:
                 error = str(e)
 
-            logger.warning ('Error: %s %s %s', error, identifier, response_text)
-            response = await self._llm.ainvoke(prompt_template.format(original_prompt, response_text, error))
-            response = response
-        
-        
-        if response == '':
-            logger.info ('No Changes for file last: %s', identifier)
-            return []
+            logger.warning("JSON parsing error for item %s (attempt %d/%d): %s", identifier, i + 1, retries, error)
+            print(f"Attempting to correct JSON parsing error for item {identifier} (attempt {i + 1}/{retries})")  # Print statement for visibility
 
-        logger.error('Not Done: %s %s', identifier, response)
-        return []
+            response = await self._llm.ainvoke(prompt_template.format(original_prompt, response_text, error))
+
+        if response == '':
+            logger.info("No changes detected after retries for item: %s", identifier)
+            return {}
+
+        logger.warning("Failed to parse JSON after retries for item: %s %s", identifier, response)
+        logger.error("Failed to parse JSON after retries for item: %s ", identifier)
+        print(f"Failed to parse JSON after retries for item {identifier}. Check the logs for details.")  # Print statement for critical failure
+
+        return {}
 
     async def analyze_project(self, directory: str, max_threads = 2, batch_size=100) -> List[List[FileAnalysis]]:
         """
         Analyzes all files in a given project directory to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
-        This method uses dynamic programming (DP) to optimize the analysis process by storing intermediate results of file analyses. 
+        This method uses dynamic programming (DP) to optimize the analysis process by storing intermediate results of file analyses.
         The project is represented as a dependency graph where nodes are files and edges indicate dependencies between files.
-        The analysis is performed in a topological order of the dependency graph to ensure that dependent files are analyzed 
+        The analysis is performed in a topological order of the dependency graph to ensure that dependent files are analyzed
         after their dependencies have been analyzed.
 
         Args:
@@ -371,21 +387,24 @@ class MigrationSummarizer:
         Returns:
             List[List[FileAnalysis]]: A list of file analyses, each containing necessary modifications for the migration.
         """
-        
+
+        start_time = time.time()
+
         # Initialize a JavaAnalyzer to analyze dependencies between files
         dependency_analyzer = JavaAnalyzer()
-        
+
         # Get the execution order of files as a graph G and a list of lists representing dependency groups
         G, list_of_lists = dependency_analyzer.get_execution_order(directory)
-        
+
         # Initialize a list to store the summaries of file analyses
         summaries: List[List[FileAnalysis]] = []
-        
+
         # Initialize a dictionary to store the results of analyzed files (dynamic programming cache)
         dp = {}
 
-        logger.info("Total number of groups for Project Java Files: %s", len(list_of_lists))
-        logger.info("Groups Sizes: %s", [len(x) for x in list_of_lists])
+        logger.info("Project analysis started. Analyzing files in directory: %s", directory)
+        logger.info("Total number of dependency groups: %s", len(list_of_lists))
+        logger.info("Dependency group sizes: %s", [len(x) for x in list_of_lists])
 
         async def process_dependency(node):
             """
@@ -400,11 +419,13 @@ class MigrationSummarizer:
             Returns:
                 file_analysis: The result of the file analysis.
             """
+            logger.debug("Analyzing file: %s", node)
+
             result = []
 
             for child in G.successors(node):
                 result.append(dp[child]);
-        
+
             result = [item for sublist in result for item in sublist]
             change_dicts = [change.__dict__ for change in result]
             json_string = json.dumps(change_dicts, indent=2)
@@ -413,19 +434,24 @@ class MigrationSummarizer:
 
             dp[node] = methods_changes
 
+            logger.debug("File analysis completed for: %s", node)
+
             return file_analysis
 
         async def process_batch(batch):  # Process a batch of dependencies
-            tasks = [process_dependency(bb) for bb in batch] 
-    
+            logger.info("Processing batch of %s files", len(batch))
+            tasks = [process_dependency(bb) for bb in batch]
+
             # Run tasks concurrently and get results
-            results = await asyncio.gather(*tasks)  
+            results = await asyncio.gather(*tasks)
+
+            logger.info("Batch processing completed.")
 
             return results
 
         for dependencies in list_of_lists:
-            logger.info('Processing Group Length: %s', len(dependencies))
-            start_time = time.time()
+            logger.info('Processing dependency group with %s files', len(dependencies))
+            group_start_time = time.time()
             # Batching logic (improved)
             for i in range(0, len(dependencies), batch_size):
                 logger.info('Batch Start Index- %s', str(i))
@@ -436,10 +462,14 @@ class MigrationSummarizer:
 
                 summaries.extend(batch_results)  # Collect results from all batches
 
-            end_time = time.time()
-            execution_time = end_time - start_time
+            group_end_time = time.time()
+            group_execution_time = group_end_time - group_start_time
+            logger.info("Dependency group processing completed. Execution time: %s seconds", group_execution_time)
 
-            logger.info("Execution time: %s", execution_time)
+        end_time = time.time()
+        total_execution_time = end_time - start_time
+
+        logger.info("Project analysis completed. Total execution time: %s seconds", total_execution_time)
 
         return summaries
 
@@ -447,24 +477,23 @@ class MigrationSummarizer:
         summaries = [item for sublist in summaries for item in sublist]
         change_dicts = [change.__dict__ for change in summaries]
         json_analysis = json.dumps(change_dicts, indent=2)
-        
+
         prompt = f"""
-        You are a Cloud Spanner expert with deep experience migrating applications from MySQl JDBC. You are reviewing an analysis of changes required to 
-        transition an application from MySQL JDBC to Spanner JDBC.
+        You are a Cloud Spanner expert with deep experience migrating applications from MySQL JDBC. You are reviewing an analysis of changes
+        required to transition an application from MySQL JDBC to Spanner JDBC, with a specific focus on the migration of complex data types 
+        and transaction handling.
 
-        Please be focused towards migrating of complex data types and transactional handling.
-
-        Analyze the following code changes and generate a migration report, you don't have to return the input data back in output:
+        Analyze the following code changes and generate a migration report. Please do not include the input data in the output.
         ```json
         {json_analysis}
         ```
 
         Instructions:
-        1.Please make sure output is less than 5000 words.
-        2. All generated results values should be single-line strings.
-        3. Please use backslash for special charactes and not include unecessary whitespace character.
-        4. Please use backslash for backticks. Extra careful with code snippets.
-        5. Please generate the ouput in JSON format having following strucutre. 
+        1. `codeDiff` should be a JSON-escaped string, ensuring proper handling of special characters.
+        2. All generated values within the report should be single-line strings.
+        3. Use backslashes to escape special characters and avoid unnecessary whitespace.
+        4. Use backslashes to escape backticks, especially within code snippets.
+        5. Generate the output in the following JSON structure:
         ```json
         {{
         "appName": "[App Name]",
@@ -508,7 +537,7 @@ class MigrationSummarizer:
             "exampleCodeChanges": [
                 {{
                 "description": "[Brief change description]",
-                "codeDiff": [JSON Escaped String with proper indentation]
+                "codeDiff": [Git Diff Format, JSON Escaped String with proper indentation]
                 "similarChangeLocations": [
                     "[File 1: Line Number]",
                     "[File 2: Line Number]",
@@ -526,6 +555,6 @@ class MigrationSummarizer:
 
         response = await self._llm.ainvoke(prompt)
 
-        response = await self.json_multishot(prompt, response, 3)
+        response = await self.json_multishot(prompt, response, 6, 'summarize_report')
 
         replace_and_save_html('result/migration_template.html', output_file, {'report_data': response})
