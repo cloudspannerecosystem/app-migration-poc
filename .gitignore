@@ -51,3 +51,6 @@ crash.*.log
 
 # Language Specific
 # ...
+
+# Generated files
+code_examples_embedded.json
