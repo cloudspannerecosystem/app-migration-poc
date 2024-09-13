@@ -25,6 +25,8 @@ import asyncio
 import aiofiles
 import logging
 import time
+from textwrap import dedent
+from example_database import ExampleDb
 
 # Define a custom log format
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -91,6 +93,8 @@ class MigrationSummarizer:
 
         self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
 
+        self._example_db = ExampleDb()
+
     async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
         Analyzes a given file to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
@@ -109,6 +113,33 @@ class MigrationSummarizer:
         except UnicodeDecodeError as e:
             print ("Reading Fife Error: ", str(e))
             return [], []    # Return empty lists on decode error
+
+        examples_prompt = ""
+        relevant_records = self._example_db.search(file_content)
+        if relevant_records:
+            example_prompt = dedent(
+                    """
+                    Code like the following
+                    ```
+                    {example}
+                    ```
+
+                    can be rewritten as follows:
+
+                    ```
+                    {rewrite}
+                    ```
+                    """)
+            examples = [
+                example_prompt.format(**record)
+                for record in relevant_records
+            ]
+            examples_prompt_template = dedent("""
+            The following are examples of how to rewrite code for Spanner.
+
+            {examples}
+            """)
+            examples_prompt = examples_prompt_template.format(examples=examples)
 
         prompt = f"""
             You are a Cloud Spanner expert. You are working on migrating an application
@@ -158,6 +189,8 @@ class MigrationSummarizer:
             ...
             ]
             ```
+
+            {examples_prompt}
 
             **Instructions:**
             1. All generated results values should be single-line strings. Please only suggest relevant changes and don't hallucinate.
