@@ -12,11 +12,15 @@ ACCESS_KEY_FILE=$2
 OUTPUT_FILE=$3
 GEMINI_VERSION=${4:-default_version} 
 
+# Path to this shell script
+# We assume the script is in the same directory as the venv and our Python command
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 # Path to the virtual environment
-VENV_PATH="/usr/local/google/home/gauravpurohit/ai/app-migration-poc/.venv"
+VENV_PATH="$SCRIPT_DIR/.venv"
 
 # Path to the Python script
-PYTHON_SCRIPT="/usr/local/google/home/gauravpurohit/ai/app-migration-poc/run_script.py"
+PYTHON_SCRIPT="$SCRIPT_DIR/run_script.py"
 
 # Read the access key from the file
 if [ -f "$ACCESS_KEY_FILE" ]; then

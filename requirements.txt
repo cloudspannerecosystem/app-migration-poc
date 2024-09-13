@@ -1,7 +1,7 @@
 langchain_google_genai
 dataclasses
 typing
-tree_sitter
+tree_sitter<0.23
 tree_sitter_java
 networkx
 ipykernel
