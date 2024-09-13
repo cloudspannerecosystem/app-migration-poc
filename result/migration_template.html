@@ -37,10 +37,10 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 <p>{{ report_data.developerSummary }}</p>
 </section>
 
-<section>
+<section id="app_statistics">
 <h2>App Statistics</h2>
 <ul>
-<li>Application Size: {{ report_data.appSize }}</li>
+<li>Application Size: {{ report_data.appSize }} ({{ app_data.linesOfCode }} lines in {{ app_data.files|length}} files)</li>
 <li>Programming Languages: {{ report_data.programmingLanguages }}</li>
 <li>Current Supported DBMS: {{ report_data.currentDBMS }}</li>
 <li>Client Drivers Used: {{ report_data.clientDrivers }}</li>
@@ -56,6 +56,8 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 
 <section>
 <h2>Code Impact</h2>
+Out of {{ app_data.files|length }} files, only the following {{ report_data.codeImpact|length }}
+are impacted by the migration to Spanner:
 <ul>
 {% for item in report_data.codeImpact %}
 <li>{{ item }}</li>
