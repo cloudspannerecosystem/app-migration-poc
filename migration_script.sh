@@ -10,7 +10,7 @@ fi
 SOURCE_DIRECTORY=$1
 ACCESS_KEY_FILE=$2
 OUTPUT_FILE=$3
-GEMINI_VERSION=${4:-default_version} 
+GEMINI_VERSION=${4:-gemini-1.5-pro-001}
 
 # Path to this shell script
 # We assume the script is in the same directory as the venv and our Python command

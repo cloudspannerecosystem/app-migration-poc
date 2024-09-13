@@ -70,7 +70,7 @@ class MethodSignatureChange:
     explanation: str
 
 class MigrationSummarizer:
-    def __init__(self, google_generative_ai_api_key: Optional[str] = None, gemini_version = "gemini-1.5-flash-001"):
+    def __init__(self, google_generative_ai_api_key: Optional[str] = None, gemini_version = "gemini-1.5-pro-001"):
         """
         Initializes the MigrationSummarizer with an optional Google Generative AI API key.
         Sets up the language model for generating migration suggestions.
