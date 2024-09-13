@@ -544,9 +544,8 @@ class MigrationSummarizer:
         Instructions:
         1. `codeDiff` should be a JSON-escaped string, ensuring proper handling of special characters.
         2. All generated values within the report should be single-line strings.
-        3. Use backslashes to escape special characters and avoid unnecessary whitespace.
-        4. Use backslashes to escape backticks, especially within code snippets.
-        5. Generate the output in the following JSON structure:
+        3. Use backslashes to escape backticks, especially within code snippets.
+        4. Generate the output in the following JSON structure:
         ```json
         {{
         "appName": "[App Name]",
