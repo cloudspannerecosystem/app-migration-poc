@@ -27,6 +27,7 @@ import logging
 import time
 from textwrap import dedent
 from example_database import ExampleDb
+from collections import defaultdict
 
 # Define a custom log format
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -62,6 +63,7 @@ class FileAnalysis:
     end_line: int
     suggested_change: str
     description: str
+    complexity: str
     warnings: List[str]
 
 @dataclasses.dataclass(frozen=True)
@@ -181,6 +183,7 @@ class MigrationSummarizer:
                 "end_line": <ending line number of the affected code w.r.t complete code contains non executable section>,
                 "suggested_change": "<example modification to the file>",
                 "description": "<human-readable description of the required change>",
+                "complexity": "<SIMPLE|MODERATE|COMPLEX>",
                 "warnings": [
                 "<thing to be aware of>",
                 "<another thing to be aware of>",
@@ -338,6 +341,7 @@ class MigrationSummarizer:
                     end_line=int(mod.get('end_line', '-1')),
                     suggested_change=mod.get('suggested_change'),
                     description=mod.get('description'),
+                    complexity=mod.get('complexity'),
                     warnings=mod.get('warnings', []),
                 ))
 
@@ -525,7 +529,10 @@ class MigrationSummarizer:
         return summaries, files_metadata
 
     async def summarize_report(self, summaries: List[List[FileAnalysis]], files_metadata: List[FileMetadata], output_file: str = 'spanner_migration_report.html'):
-        file_analyses
+        file_analyses = defaultdict(lambda: defaultdict(list))
+        for file_data in summaries:
+            for analysis in file_data:
+                file_analyses[analysis.filename][analysis.complexity].append(analysis)
 
         summaries = [item for sublist in summaries for item in sublist]
         change_dicts = [change.__dict__ for change in summaries]
@@ -613,7 +620,8 @@ class MigrationSummarizer:
             'linesOfCode': sum(x.line_count for x in files_metadata),
         }
 
-
         replace_and_save_html('result/migration_template.html', output_file, {
             'report_data': response,
-            'app_data': app_data})
+            'app_data': app_data,
+            'file_analyses': file_analyses,
+        })

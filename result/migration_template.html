@@ -2,8 +2,10 @@
 <html>
 <head>
 <title>Migration Report for {{ report_data.appName }}</title>
-<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
 <style>
 body { font-family: 'Arial', sans-serif; line-height: 1.6; margin: 20px; }
 h1, h2, h3, h4 { color: #333; }
@@ -69,11 +71,75 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 <h2>Code Impact</h2>
 Out of {{ app_data.files|length }} files, only the following {{ report_data.codeImpact|length }}
 are impacted by the migration to Spanner:
-<ul>
-{% for item in report_data.codeImpact %}
-<li>{{ item }}</li>
-{% endfor %}
-</ul>
+
+<div>
+  <canvas id="files_impact"></canvas>
+</div>
+
+<script>
+  // From https://github.com/chartjs/Chart.js/blob/master/docs/scripts/utils.js
+  // Not sure how to import that file here?
+  const CHART_COLORS = {
+    red: 'rgb(255, 99, 132)',
+    orange: 'rgb(255, 159, 64)',
+    yellow: 'rgb(255, 205, 86)',
+    green: 'rgb(75, 192, 192)',
+    blue: 'rgb(54, 162, 235)',
+    purple: 'rgb(153, 102, 255)',
+    grey: 'rgb(201, 203, 207)'
+  };
+
+  const ctx = document.getElementById('files_impact');
+
+  const labels = {{ file_analyses.keys()|list|tojson }};
+  const shortlabels = labels.map((x) => x.split("/").pop());
+
+  const complex_changes_counts = [{% for file in file_analyses.values() %}{{ file.COMPLEX|length}}, {% endfor %}];
+  const moderate_changes_counts = [{% for file in file_analyses.values() %}{{ file.MODERATE|length}}, {% endfor %}];
+  const simple_changes_counts = [{% for file in file_analyses.values() %}{{ file.SIMPLE|length}}, {% endfor %}];
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: shortlabels,
+      datasets: [
+        {
+          label: "Complex changes",
+          data: complex_changes_counts,
+          backgroundColor: CHART_COLORS.red
+        },
+        {
+          label: "Moderate changes",
+          data: moderate_changes_counts,
+          backgroundColor: CHART_COLORS.yellow
+        },
+        {
+          label: "Simple changes",
+          data: simple_changes_counts,
+          backgroundColor: CHART_COLORS.green
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          stacked: true
+        },
+        y: {
+          beginAtZero: true,
+          stacked: true
+        }
+      },
+      callbacks: {
+        label: function(tooltipItems, data) {
+          return labels[tooltipItems.index];
+        }
+      }
+    }
+  });
+</script>
+
 </section>
 
 <section>
