@@ -17,11 +17,33 @@ code { background-color: #f5f5f5; padding: 2px 4px; border-radius: 4px; }
 pre code { display: block; padding: 10px; overflow-x: auto; } 
 .task { margin-bottom: 30px; }
 .task h3 { margin-top: 0; }
+#app_statistics {
+  position: relative;
+  background-color: #fff;
+  width: 300px;
+  float: right;
+  border: 1px solid #ddd;
+  padding: 0 12px 0 12px;
+  margin: 12px;
+  z-index: 1000;
+}
 </style>
 </head>
 <body>
 
 <h1>Migration Report for {{ report_data.appName }}</h1>
+
+<section id="app_statistics">
+  <h2>App Statistics</h2>
+  <ul>
+  <li>Application Size: {{ app_data.linesOfCode }} lines in {{ app_data.files|length}} files</li>
+  <li>Programming Languages: {{ report_data.programmingLanguages }}</li>
+  <li>Current Supported DBMS: {{ report_data.currentDBMS }}</li>
+  <li>Client Drivers Used: {{ report_data.clientDrivers }}</li>
+  <li>ORMs/Toolkits Detected: {{ report_data.ormsToolkits }}</li>
+  <li>Additional Notes: {{ report_data.additionalNotes }}</li>
+  </ul>
+</section>
 
 <section>
 <h2>Executive Summary</h2>
@@ -35,18 +57,6 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 <section>
 <h2>Developer Summary</h2>
 <p>{{ report_data.developerSummary }}</p>
-</section>
-
-<section id="app_statistics">
-<h2>App Statistics</h2>
-<ul>
-<li>Application Size: {{ report_data.appSize }} ({{ app_data.linesOfCode }} lines in {{ app_data.files|length}} files)</li>
-<li>Programming Languages: {{ report_data.programmingLanguages }}</li>
-<li>Current Supported DBMS: {{ report_data.currentDBMS }}</li>
-<li>Client Drivers Used: {{ report_data.clientDrivers }}</li>
-<li>ORMs/Toolkits Detected: {{ report_data.ormsToolkits }}</li>
-<li>Additional Notes: {{ report_data.additionalNotes }}</li>
-</ul>
 </section>
 
 <section>
@@ -134,7 +144,7 @@ are impacted by the migration to Spanner:
 <h4>Example Code Changes:</h4>
 {% for change in task.exampleCodeChanges %}
 <p>{{ change.description }}</p>
-<pre><code class="language-java language-diff">{{ change.codeDiff }}</code></pre> 
+<pre><code class="language-java language-diff">{{ change.codeDiff }}</code></pre>
 <p>Similar changes might be needed in:</p>
 <ul>
 {% for location in change.similarChangeLocations %}
