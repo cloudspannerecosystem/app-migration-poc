@@ -549,7 +549,7 @@ class MigrationSummarizer:
         ```json
         {{
         "appName": "[App Name]",
-        "sourceTargetAssessment": "[Source & Target Database Assessment details]",
+        "sourceTargetAssessment": "[Source & Target Database Assessment details, one paragraph]",
         "riskAssessmentMitigation": "[Risk Assessment & Mitigation details]",
         "effortEstimation": "[Effort Estimation details]",
         "developerSummary": "[Concise paragraph about app purpose and functionality]",
