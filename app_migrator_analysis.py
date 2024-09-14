@@ -64,6 +64,7 @@ class FileAnalysis:
     suggested_change: str
     description: str
     complexity: str
+    notes: List[str]
     warnings: List[str]
 
 @dataclasses.dataclass(frozen=True)
@@ -100,7 +101,8 @@ class MigrationSummarizer:
 
         self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
 
-        self._example_db = ExampleDb()
+        self._code_example_db = ExampleDb.CodeExampleDb()
+        self._context_example_db = ExampleDb.ConceptExampleDb()
 
     async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
@@ -130,7 +132,7 @@ class MigrationSummarizer:
         )
 
         examples_prompt = ""
-        relevant_records = self._example_db.search(file_content)
+        relevant_records = self._code_example_db.search(file_content)
         if relevant_records:
             example_prompt = dedent(
                     """
@@ -342,6 +344,8 @@ class MigrationSummarizer:
                     suggested_change=mod.get('suggested_change'),
                     description=mod.get('description'),
                     complexity=mod.get('complexity'),
+                    notes=[x["rewrite"] for x in
+                           self._context_example_db.search(mod.get('description')).values()],
                     warnings=mod.get('warnings', []),
                 ))
 

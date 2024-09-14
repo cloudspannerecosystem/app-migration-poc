@@ -8,5 +8,10 @@
     "id": 2,
     "example": "java.sql.Timestamp",
     "rewrite": "java.sql.Timestamp /* Spanner supports JDBC native types, these should be used directly by Spanner */"
+  },
+  {
+    "id": 3,
+    "example": "int recordId",
+    "rewrite": "int recordId /* Spanner natively supports integer IDs */"
   }
 ]

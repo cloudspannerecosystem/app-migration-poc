@@ -107,4 +107,11 @@ def generate_missing_embeddings(
 
 
 if __name__ == "__main__":
-  generate_missing_embeddings()
+  generate_missing_embeddings(
+    example_file="code_examples.json",
+    output_file="code_examples_embedded.json",
+  )
+  generate_missing_embeddings(
+    example_file="concept_examples.json",
+    output_file="concept_examples_embedded.json",
+  )

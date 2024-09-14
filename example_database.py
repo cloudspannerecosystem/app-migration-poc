@@ -25,7 +25,16 @@ vertexai.init()
 
 
 class ExampleDb:
-  def __init__(self, examples_file: str = "code_examples_embedded.json"):
+
+  @classmethod
+  def CodeExampleDb(cls):
+    return cls(examples_file="code_examples_embedded.json")
+
+  @classmethod
+  def ConceptExampleDb(cls):
+    return cls(examples_file="concept_examples_embedded.json")
+
+  def __init__(self, examples_file: str):
     self._examples_file = examples_file
 
     with open(examples_file) as f:
