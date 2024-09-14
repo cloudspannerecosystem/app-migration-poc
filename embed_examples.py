@@ -50,9 +50,9 @@ def get_un_embedded_strings(examples_file: Embeddings, output_file: Embeddings) 
     strings.add(record["rewrite"])
 
   for record in output_file:
-    if "example_embedding" in record:
+    if "example_embedding" in record and record["example"] in strings:
       strings.remove(record["example"])
-    if "rewrite_embedding" in record:
+    if "rewrite_embedding" in record and record["rewrite"] in strings:
       strings.remove(record["rewrite"])
 
   return strings

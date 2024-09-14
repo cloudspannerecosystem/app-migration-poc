@@ -43,7 +43,7 @@ class ExampleDb:
     }
 
   def _embed_search_terms(self, search_terms: List[str]) -> np.ndarray:
-    if len(search_terms) == 0:
+    if not search_terms:
       # `model.get_embeddings()` doesn't handle empty input gracefully.
       # Correct behavior is to return empty output.
       return []
