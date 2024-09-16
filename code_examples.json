@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "example": "CREATE TABLE <example_table> (id INT AUTO_INCREMENT)",
+    "rewrite": "CREATE SEQUENCE <example_table>_id_seq\n    OPTIONS (sequence_kind = 'bit_reversed_positive');\nCREATE TABLE t (id INT64 DEFAULT (GET_NEXT_SEQUENCE_VALUE(SEQUENCE <example_table>_id_seq));"
+  },
+  {
+    "id": 2,
+    "example": "java.sql.Timestamp",
+    "rewrite": "java.sql.Timestamp /* Spanner supports JDBC native types, these should be used directly by Spanner */"
+  },
+  {
+    "id": 3,
+    "example": "int recordId",
+    "rewrite": "int recordId /* Spanner natively supports integer IDs */"
+  }
+]

@@ -51,3 +51,10 @@ crash.*.log
 
 # Language Specific
 # ...
+
+# Generated files
+code_examples_embedded.json
+**/__pycache__/*
+app-migration-diff.json
+concept_examples_embedded.json
+gemini_migration.log

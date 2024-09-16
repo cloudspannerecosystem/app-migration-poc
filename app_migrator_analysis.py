@@ -25,6 +25,9 @@ import asyncio
 import aiofiles
 import logging
 import time
+from textwrap import dedent
+from example_database import ExampleDb
+from collections import defaultdict
 
 # Define a custom log format
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -60,7 +63,14 @@ class FileAnalysis:
     end_line: int
     suggested_change: str
     description: str
+    complexity: str
+    notes: List[str]
     warnings: List[str]
+
+@dataclasses.dataclass(frozen=True)
+class FileMetadata:
+    filename: str
+    line_count: int
 
 @dataclasses.dataclass(frozen=True)
 class MethodSignatureChange:
@@ -70,7 +80,7 @@ class MethodSignatureChange:
     explanation: str
 
 class MigrationSummarizer:
-    def __init__(self, google_generative_ai_api_key: Optional[str] = None, gemini_version = "gemini-1.5-flash-001"):
+    def __init__(self, google_generative_ai_api_key: Optional[str] = None, gemini_version = "gemini-1.5-pro-001"):
         """
         Initializes the MigrationSummarizer with an optional Google Generative AI API key.
         Sets up the language model for generating migration suggestions.
@@ -91,6 +101,9 @@ class MigrationSummarizer:
 
         self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
 
+        self._code_example_db = ExampleDb.CodeExampleDb()
+        self._context_example_db = ExampleDb.ConceptExampleDb()
+
     async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
         Analyzes a given file to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
@@ -101,20 +114,55 @@ class MigrationSummarizer:
             method_changes (str): Changes in public method signatures from dependent files.
 
         Returns:
-            Tuple[List[FileAnalysis], List[MethodSignatureChange]]: A list of file modifications and method signature changes.
+            List[FileAnalysis]: A list of file modifications
+            List[MethodSignatureChange]: A list of method signature changes
+            FileMetadata: Metadata about the file being analyzed
         """
         try:
             async with aiofiles.open(filepath, "r", encoding="utf-8") as f:
                 file_content = await f.read()
         except UnicodeDecodeError as e:
             print ("Reading Fife Error: ", str(e))
-            return [], []    # Return empty lists on decode error
+            # Return empty lists on decode error
+            return [], [], FileMetadata(filepath, None)
+
+        file_metadata = FileMetadata(
+            filename=filepath,
+            line_count=file_content.count('\n'),
+        )
+
+        examples_prompt = ""
+        relevant_records = self._code_example_db.search(file_content)
+        if relevant_records:
+            example_prompt = dedent(
+                    """
+                    Code like the following
+                    ```
+                    {example}
+                    ```
+
+                    can be rewritten as follows:
+
+                    ```
+                    {rewrite}
+                    ```
+                    """)
+            examples = [
+                example_prompt.format(**record)
+                for record in relevant_records
+            ]
+            examples_prompt_template = dedent("""
+            The following are examples of how to rewrite code for Spanner.
+
+            {examples}
+            """)
+            examples_prompt = examples_prompt_template.format(examples=examples)
 
         prompt = f"""
             You are a Cloud Spanner expert. You are working on migrating an application
             from MySQL JDBC to Spanner JDBC and not Java Client library. Review the following file and identify
             how it will need to be modified to work with Cloud Spanner. The code provided contains blank lines, comments, documentation, and other non-executable elements.
-            You can refer function docs and comments to understand more about it and then suggest the chagnes. 
+            You can refer function docs and comments to understand more about it and then suggest the chagnes.
 
             Return your results in JSON dictionary format.  The JSON output should have three top-level keys:
 
@@ -124,7 +172,7 @@ class MigrationSummarizer:
 
             Make sure changes in `file_modifications` and `method_signature_changes` are consistent with each other.
 
-            Ensure that line numbers in the file_modifications are accurate and correspond to the line numbers in the original code file, including comments, 
+            Ensure that line numbers in the file_modifications are accurate and correspond to the line numbers in the original code file, including comments,
             blank lines, and other non-executable elements.
 
             **Format for `file_modifications`:**
@@ -137,6 +185,7 @@ class MigrationSummarizer:
                 "end_line": <ending line number of the affected code w.r.t complete code contains non executable section>,
                 "suggested_change": "<example modification to the file>",
                 "description": "<human-readable description of the required change>",
+                "complexity": "<SIMPLE|MODERATE|COMPLEX>",
                 "warnings": [
                 "<thing to be aware of>",
                 "<another thing to be aware of>",
@@ -158,6 +207,8 @@ class MigrationSummarizer:
             ...
             ]
             ```
+
+            {examples_prompt}
 
             **Instructions:**
             1. All generated results values should be single-line strings. Please only suggest relevant changes and don't hallucinate.
@@ -263,7 +314,7 @@ class MigrationSummarizer:
             {file_content}
             ```
 
-            The above source file is dependent on some files which also has following changes in the public method signature: 
+            The above source file is dependent on some files which also has following changes in the public method signature:
             ```
             {method_changes}
             ```
@@ -292,6 +343,9 @@ class MigrationSummarizer:
                     end_line=int(mod.get('end_line', '-1')),
                     suggested_change=mod.get('suggested_change'),
                     description=mod.get('description'),
+                    complexity=mod.get('complexity'),
+                    notes=[x["rewrite"] for x in
+                           self._context_example_db.search(mod.get('description')).values()],
                     warnings=mod.get('warnings', []),
                 ))
 
@@ -303,7 +357,7 @@ class MigrationSummarizer:
                     explanation=method.get('explanation'),
                 ))
 
-        return file_analysis, method_signatures
+        return file_analysis, method_signatures, file_metadata
 
     async def json_multishot(self, original_prompt: str, response: str, retries: int = 3, identifier = ''):
         """
@@ -386,6 +440,7 @@ class MigrationSummarizer:
 
         Returns:
             List[List[FileAnalysis]]: A list of file analyses, each containing necessary modifications for the migration.
+            List[FileMetadata]: A list of procedurally-computed metadata about each file
         """
 
         start_time = time.time()
@@ -398,6 +453,9 @@ class MigrationSummarizer:
 
         # Initialize a list to store the summaries of file analyses
         summaries: List[List[FileAnalysis]] = []
+
+        # Metadata computed deterministically about each file
+        files_metadata: List[FileMetadata] = []
 
         # Initialize a dictionary to store the results of analyzed files (dynamic programming cache)
         dp = {}
@@ -430,13 +488,13 @@ class MigrationSummarizer:
             change_dicts = [change.__dict__ for change in result]
             json_string = json.dumps(change_dicts, indent=2)
 
-            file_analysis, methods_changes = await self.analyze_file(filepath=node, method_changes=json_string)
+            file_analysis, methods_changes, file_metadata = await self.analyze_file(filepath=node, method_changes=json_string)
 
             dp[node] = methods_changes
 
             logger.debug("File analysis completed for: %s", node)
 
-            return file_analysis
+            return file_analysis, file_metadata
 
         async def process_batch(batch):  # Process a batch of dependencies
             logger.info("Processing batch of %s files", len(batch))
@@ -460,7 +518,8 @@ class MigrationSummarizer:
                 # Schedule the batch for processing
                 batch_results = await process_batch(batch)
 
-                summaries.extend(batch_results)  # Collect results from all batches
+                summaries.extend([x[0] for x in batch_results])  # Collect results from all batches
+                files_metadata.extend([x[1] for x in batch_results])
 
             group_end_time = time.time()
             group_execution_time = group_end_time - group_start_time
@@ -471,16 +530,21 @@ class MigrationSummarizer:
 
         logger.info("Project analysis completed. Total execution time: %s seconds", total_execution_time)
 
-        return summaries
+        return summaries, files_metadata
 
-    async def summarize_report(self, summaries: List[List[FileAnalysis]], output_file: str = 'spanner_migration_report.html'):
+    async def summarize_report(self, summaries: List[List[FileAnalysis]], files_metadata: List[FileMetadata], output_file: str = 'spanner_migration_report.html'):
+        file_analyses = defaultdict(lambda: defaultdict(list))
+        for file_data in summaries:
+            for analysis in file_data:
+                file_analyses[analysis.filename][analysis.complexity].append(analysis)
+
         summaries = [item for sublist in summaries for item in sublist]
         change_dicts = [change.__dict__ for change in summaries]
         json_analysis = json.dumps(change_dicts, indent=2)
 
         prompt = f"""
         You are a Cloud Spanner expert with deep experience migrating applications from MySQL JDBC. You are reviewing an analysis of changes
-        required to transition an application from MySQL JDBC to Spanner JDBC, with a specific focus on the migration of complex data types 
+        required to transition an application from MySQL JDBC to Spanner JDBC, with a specific focus on the migration of complex data types
         and transaction handling.
 
         Analyze the following code changes and generate a migration report. Please do not include the input data in the output.
@@ -491,13 +555,12 @@ class MigrationSummarizer:
         Instructions:
         1. `codeDiff` should be a JSON-escaped string, ensuring proper handling of special characters.
         2. All generated values within the report should be single-line strings.
-        3. Use backslashes to escape special characters and avoid unnecessary whitespace.
-        4. Use backslashes to escape backticks, especially within code snippets.
-        5. Generate the output in the following JSON structure:
+        3. Use backslashes to escape backticks, especially within code snippets.
+        4. Generate the output in the following JSON structure:
         ```json
         {{
         "appName": "[App Name]",
-        "sourceTargetAssessment": "[Source & Target Database Assessment details]",
+        "sourceTargetAssessment": "[Source & Target Database Assessment details, one paragraph]",
         "riskAssessmentMitigation": "[Risk Assessment & Mitigation details]",
         "effortEstimation": "[Effort Estimation details]",
         "developerSummary": "[Concise paragraph about app purpose and functionality]",
@@ -556,5 +619,13 @@ class MigrationSummarizer:
         response = await self._llm.ainvoke(prompt)
 
         response = await self.json_multishot(prompt, response, 6, 'summarize_report')
+        app_data = {
+            'files': files_metadata,
+            'linesOfCode': sum(x.line_count for x in files_metadata),
+        }
 
-        replace_and_save_html('result/migration_template.html', output_file, {'report_data': response})
+        replace_and_save_html('result/migration_template.html', output_file, {
+            'report_data': response,
+            'app_data': app_data,
+            'file_analyses': file_analyses,
+        })

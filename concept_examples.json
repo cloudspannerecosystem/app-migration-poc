@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "example": "ID generation for a table",
+    "rewrite": "Spanner fully supports automatic ID generation.  It does so using a sequenmce to automatically generate the ID.  Note that the sequence generates random (bit-reversed) integers, not sequential integers as in other database engines."
+  },
+  {
+    "id": 2,
+    "example": "Identify rows using a UUID",
+    "rewrite": "Spanner fully supports automatic ID generation.  It does so using a sequenmce to automatically generate the ID.  Note that the sequence generates random (bit-reversed) integers, not sequential integers as in other database engines."
+  },
+  {
+    "id": 3,
+    "example": "Transactions and autocommit",
+    "rewrite": "Spanner fully supports, and encourages the use of transactions.  Autocommit should be turned off except for code that is deliberately executing single-statement transactions."
+  }
+]
