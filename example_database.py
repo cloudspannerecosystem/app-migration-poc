@@ -66,10 +66,17 @@ class ExampleDb:
             np.array(embedding.values, dtype=np.float32) for embedding in embeddings
         ]
 
-    def search(
-        self, search_terms: str | List[str], distance: float = 0.25, top_k: int = 10
-    ) -> Dict[int, float | str]:
-        target_similarity = 1 - distance
+  def search(self,
+             search_terms: str|List[str],
+             distance: float = 0.25,
+             top_k: int = 10
+             ) -> Dict[int, float|str]:
+    if not search_terms:
+      # If no input, shirt-circuit and return no output.
+      # (The code below assumes at least one input term to search for.)
+      return {}
+
+    target_similarity = 1 - distance
 
         if isinstance(search_terms, str):
             # Heuristic for breaking up big string blocks

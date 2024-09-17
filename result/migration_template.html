@@ -129,7 +129,7 @@ are impacted by the migration to Spanner:
 <script type="text/javascript">
   google.charts.load("current", {packages:["corechart"]});
   google.charts.setOnLoadCallback(drawChart);
-  
+
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['Complexity Type', 'Lines of Code'],
@@ -154,8 +154,8 @@ are impacted by the migration to Spanner:
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['File', 'Number of Files'],
-      ['Files for Modification',  parseInt({{ report_data.codeImpact|length }})], 
-      ['Files Unchanged', parseInt({{ app_data.files|length }}) - parseInt({{ report_data.codeImpact|length }})], 
+      ['Files for Modification',  parseInt({{ report_data.codeImpact|length }})],
+      ['Files Unchanged', parseInt({{ app_data.files|length }}) - parseInt({{ report_data.codeImpact|length }})],
     ]);
 
     var options = {
@@ -174,8 +174,8 @@ are impacted by the migration to Spanner:
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['Code', 'Lines of Code'],
-      ['Code for Modification', parseInt({{ report_data.numberOfLines }})], 
-      ['Unchanged Code', {{ app_data.linesOfCode - report_data.numberOfLines|int }}], 
+      ['Code for Modification', parseInt({{ report_data.numberOfLines }})],
+      ['Unchanged Code', {{ app_data.linesOfCode - report_data.numberOfLines|int }}],
     ]);
 
     var options = {
@@ -273,7 +273,7 @@ are impacted by the migration to Spanner:
           title: '{{ effort_type }} Task',
           hAxis: {title: 'Number of Code Lines'},
           vAxis: {title: 'Task Name'},
-          explorer: { 
+          explorer: {
             actions: ['dragToZoom', 'rightClickToReset'],
             axis: 'horizontal',
             keepInBounds: true
@@ -286,7 +286,7 @@ are impacted by the migration to Spanner:
     </script>
     <div id="chart_div_{{ loop.index }}" style="width: 900px; height: 500px;"></div>
 
-    
+
     <table>
         <thead>
             <tr>
