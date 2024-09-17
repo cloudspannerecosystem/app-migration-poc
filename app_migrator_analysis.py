@@ -28,6 +28,8 @@ from langchain_google_vertexai import (HarmBlockThreshold, HarmCategory,
 
 from dependency_analyzer.java_analyze import JavaAnalyzer
 from example_database import ExampleDb
+import base64
+import mimetypes
 from logger_config import setup_logger
 from utils import (is_dao_class, list_files,  # type: ignore
                    parse_json_with_retries, replace_and_save_html)
@@ -62,6 +64,15 @@ class MethodSignatureChange:
     new_signature: str
     explanation: str
 
+def fileToDataUrl(filename: str, mimetype: str = None) -> str:
+    if not mimetype:
+        mimetype = mimetypes.guess_type(filename)
+    if not isinstance(mimetype, str):
+        raise IOError(f"Unknow MIME type for {filename}: {mimetype}")
+
+    with open(filename, "rb") as f:
+        filedata = base64.b64encode(f.read())
+        return f"data:{mimetype};base64,{filedata}"
 
 class MigrationSummarizer:
     def __init__(
@@ -712,6 +723,9 @@ class MigrationSummarizer:
 
         logger.info(report_data)
 
+        gcp_logo_data = fileToDataUrl("result/gcp.png")
+        spanner_logo_data = fileToDataUrl("result/spanner.png")
+
         replace_and_save_html(
             "result/migration_template.html",
             output_file,
@@ -719,6 +733,10 @@ class MigrationSummarizer:
                 "report_data": report_data,
                 "app_data": app_data,
                 "file_analyses": file_analyses,
+                "filedata": {
+                    "gcp_logo": gcp_logo_data,
+                    "spanner_logo": spanner_logo_data,
+                }
             },
         )
 
