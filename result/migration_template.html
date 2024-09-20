@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
 <style>
 body { font-family: 'Arial', sans-serif; line-height: 1.6; margin: 20px; }
@@ -61,8 +62,11 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
   z-index: 1000;
 }
 #files_impact {
-    height: 400px;
-    width: 50%;
+    width: 70% !important;
+    margin-left: 12%;
+}
+.code-impact-charts {
+  display: flex;
 }
 </style>
 </head>
@@ -70,8 +74,8 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 
 <div class="heading-container">
     <div class="image-container">
-        <img src="gcp.png" alt="Google Cloud Logo">
-        <img src="spanner.png" alt="Google Cloud Spanner Logo">
+        <img src="/usr/local/google/home/gauravpurohit/ai/app-migration-poc/result/gcp.png" alt="Google Cloud Logo">
+        <img src="/usr/local/google/home/gauravpurohit/ai/app-migration-poc/result/spanner.png" alt="Google Cloud Spanner Logo">
     </div>
     <h1>{{ report_data.appName }} Migration from MySQL to Google Cloud Spanner</h1>
 </div>
@@ -114,8 +118,75 @@ Out of {{ app_data.files|length }} files, only the following {{ report_data.code
 are impacted by the migration to Spanner:
 
 <div>
+  <div class="code-impact-charts">
+    <div id="piechart-files-affected" style="width: 900px; height: 500px;"></div>
+    <div id="piechart-lines-affected" style="width: 900px; height: 500px;"></div>
+    <div id="piechart-code-complexity-affected" style="width: 900px; height: 500px;"></div>
+  </div>
   <canvas id="files_impact"></canvas>
 </div>
+
+<script type="text/javascript">
+  google.charts.load("current", {packages:["corechart"]});
+  google.charts.setOnLoadCallback(drawChart);
+  
+  function drawChart() {
+    var data = google.visualization.arrayToDataTable([
+      ['Complexity Type', 'Lines of Code'],
+      {% for complexity, lines in report_data.code_lines_by_complexity.items() %}
+      ['{{ complexity }}', {{ lines }}] {% if not loop.last %}, {% endif %}
+      {% endfor %}
+    ]);
+
+    var options = {
+      title: 'Code Affected by Complexity',
+      is3D: true,
+    };
+
+    var chart = new google.visualization.PieChart(document.getElementById('piechart-code-complexity-affected'));
+    chart.draw(data, options);
+  }
+</script>
+
+<script type="text/javascript">
+  google.charts.load("current", {packages:["corechart"]});
+  google.charts.setOnLoadCallback(drawChart);
+  function drawChart() {
+    var data = google.visualization.arrayToDataTable([
+      ['File', 'Number of Files'],
+      ['Files for Modification',  parseInt({{ report_data.codeImpact|length }})], 
+      ['Files Unchanged', parseInt({{ app_data.files|length }}) - parseInt({{ report_data.codeImpact|length }})], 
+    ]);
+
+    var options = {
+      title: 'Source File Impact',
+      is3D: true,
+    };
+
+    var chart = new google.visualization.PieChart(document.getElementById('piechart-files-affected'));
+    chart.draw(data, options);
+  }
+</script>
+
+<script type="text/javascript">
+  google.charts.load("current", {packages:["corechart"]});
+  google.charts.setOnLoadCallback(drawChart);
+  function drawChart() {
+    var data = google.visualization.arrayToDataTable([
+      ['Code', 'Lines of Code'],
+      ['Code for Modification', parseInt({{ report_data.numberOfLines }})], 
+      ['Unchanged Code', {{ app_data.linesOfCode - report_data.numberOfLines|int }}], 
+    ]);
+
+    var options = {
+      title: 'Code Lines Impact',
+      is3D: true,
+    };
+
+    var chart = new google.visualization.PieChart(document.getElementById('piechart-lines-affected'));
+    chart.draw(data, options);
+  }
+</script>
 
 <script>
   // From https://github.com/chartjs/Chart.js/blob/master/docs/scripts/utils.js
@@ -183,50 +254,62 @@ are impacted by the migration to Spanner:
 
 </section>
 
+{% for effort_type, efforts in report_data.efforts.items() %}
 <section>
-<h2>Major Efforts</h2>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>Task Shortname</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-{% for effort in report_data.majorEfforts %}
-<tr>
-<td>{{ effort.category }}</td>
-<td>{{ effort.taskShortname }}</td>
-<td>{{ effort.description }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</section>
+    <h2>{{ effort_type }} Efforts</h2>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
 
-<section>
-<h2>Minor Efforts</h2>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>Task Shortname</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-{% for effort in report_data.minorEfforts %}
-<tr>
-<td>{{ effort.category }}</td>
-<td>{{ effort.taskShortname }}</td>
-<td>{{ effort.description }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</section>
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Task Name', 'Number of Code Lines'],
+          {% for effort in efforts %}
+          ['{{ effort.category }}', parseInt({{ effort.numberOfLines }})] {% if not loop.last %}, {% endif %}
+          {% endfor %}
+        ]);
 
+        var options = {
+          title: '{{ effort_type }} Task',
+          hAxis: {title: 'Number of Code Lines'},
+          vAxis: {title: 'Task Name'},
+          explorer: { 
+            actions: ['dragToZoom', 'rightClickToReset'],
+            axis: 'horizontal',
+            keepInBounds: true
+          }
+        };
+
+        var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_{{ loop.index }}'));
+        chart.draw(data, options);
+      }
+    </script>
+    <div id="chart_div_{{ loop.index }}" style="width: 900px; height: 500px;"></div>
+
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Task Shortname</th>
+                <th>Description</th>
+                <th>Complexity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for effort in efforts %}
+            <tr>
+                <td>{{ effort.category }}</td>
+                <td>{{ effort.description }}</td>
+                <td>{{ effort.complexity }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endfor %}
+
+
+{% if report_data.notes %}
 <section>
 <h2>Miscellaneous Efforts</h2>
 <ul>
@@ -235,31 +318,38 @@ are impacted by the migration to Spanner:
 {% endfor %}
 </ul>
 </section>
+{% endif %}
 
 <section>
 <h2>Tasks</h2>
 {% for task in report_data.tasks %}
 <div class="task">
 <h3>{{ task.taskShortname }}</h3>
-<p>Description: {{ task.description }}</p>
-<p>Affected Files:</p>
+<p><b>Description:</b> {{ task.description }}</p>
+<p><b>Affected Files:</b></p>
 <ul>
 {% for file in task.affectedFiles %}
 <li>{{ file }}</li>
 {% endfor %}
-</ul> 
+</ul>
 {% if task.exampleCodeChanges %}
 <h4>Example Code Changes:</h4>
+<ol>
 {% for change in task.exampleCodeChanges %}
-<p>{{ change.description }}</p>
-<pre><code class="language-java language-diff">{{ change.codeDiff }}</code></pre>
-<p>Similar changes might be needed in:</p>
-<ul>
-{% for location in change.similarChangeLocations %}
-<li>{{ location }}</li>
+  <li>
+    <p>{{ change.description }}</p>
+    <pre><code class="language-java language-diff">{{ change.codeDiff }}</code></pre>
+    {% if change.similarChangeLocations %}
+      <p>Similar changes might be needed in:</p>
+      <ul>
+      {% for location in change.similarChangeLocations %}
+        <li>{{ location }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  </li>
 {% endfor %}
-</ul>
-{% endfor %}
+</ol>
 {% endif %}
 </div>
 {% endfor %}
