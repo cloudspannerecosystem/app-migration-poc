@@ -1,0 +1,60 @@
+[
+    {
+      "functionality": "Basic CRUD Operations with JDBC (using bit-reversed sequences)",
+      "source_code": "String sql = \"INSERT INTO users (name, age) VALUES (?, ?)\";\nPreparedStatement stmt = conn.prepareStatement(sql);\nstmt.setString(1, \"John Doe\");\nstmt.setInt(2, 30);\nstmt.executeUpdate();",
+      "mysql_schema": "CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), age INT);",
+      "spanner_schema": "CREATE TABLE users (\n  id INT64 NOT NULL,\n  name STRING(MAX),\n  age INT64\n) PRIMARY KEY(id),",
+      "ground_truth_solution": "String sql = \"INSERT INTO users (name, age) VALUES (?, ?)\";\nPreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);\nstmt.setString(1, \"John Doe\");\nstmt.setLong(2, 30);\nstmt.executeUpdate();\nResultSet generatedKeys = stmt.getGeneratedKeys();\nlong generatedId = generatedKeys.getLong(1);",
+      "description": "Spanner supports auto-generated keys using bit-reversed sequences. Define the `id` column as `GENERATED_BY_DEFAULT AS IDENTITY` in the Spanner schema. The Spanner JDBC driver can then retrieve the generated ID using `Statement.RETURN_GENERATED_KEYS`."
+    },
+
+
+    {
+      "functionality": "Handling AUTO_INCREMENT with JDBC (using bit-reversed sequences)",
+      "source_code": "String sql = \"INSERT INTO products (name, price) VALUES (?, ?)\";\nPreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);\nstmt.setString(1, \"Laptop\");\nstmt.setDouble(2, 1200.00);\nstmt.executeUpdate();\nResultSet rs = stmt.getGeneratedKeys();\nif (rs.next()) {\n  int generatedId = rs.getInt(1);\n  // ... use generatedId\n}",
+      "mysql_schema": "CREATE TABLE products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), price DECIMAL);",
+      "spanner_schema": "CREATE TABLE products (\n  id INT64 NOT NULL,\n  name STRING(MAX),\n  price NUMERIC\n) PRIMARY KEY(id),",
+      "ground_truth_solution": "String sql = \"INSERT INTO products (name, price) VALUES (?, ?)\";\nPreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);\nstmt.setString(1, \"Laptop\");\nstmt.setBigDecimal(2, new BigDecimal(\"1200.00\"));\nstmt.executeUpdate();\nResultSet generatedKeys = stmt.getGeneratedKeys();\nlong generatedId = generatedKeys.getLong(1);\n// ... use generatedId",
+      "description": "Spanner supports auto-generated keys using bit-reversed sequences. Define the `id` column as `GENERATED_BY_DEFAULT AS IDENTITY` in the Spanner schema. The Spanner JDBC driver can then retrieve the generated ID using `Statement.RETURN_GENERATED_KEYS`."
+    },
+
+
+    {
+      "functionality": "Date/Time Data Type Conversion with JDBC",
+      "source_code": "String sql = \"INSERT INTO events (name, event_date) VALUES (?, ?)\";\nPreparedStatement stmt = conn.prepareStatement(sql);\nstmt.setString(1, \"Workshop\");\nstmt.setDate(2, new java.sql.Date(System.currentTimeMillis()));\nstmt.executeUpdate();",
+      "mysql_schema": "CREATE TABLE events (id INT PRIMARY KEY, name VARCHAR(255), event_date DATE);",
+      "spanner_schema": "CREATE TABLE events (\n  id INT64 NOT NULL,\n  name STRING(MAX),\n  event_date DATE\n) PRIMARY KEY(id),",
+      "ground_truth_solution": "String sql = \"INSERT INTO events (id, name, event_date) VALUES (?, ?, ?)\";\nPreparedStatement stmt = conn.prepareStatement(sql);\nstmt.setLong(1, idGenerator.generateId()); // Or any other ID generation method\nstmt.setString(2, \"Workshop\");\nstmt.setDate(2, com.google.cloud.Date.fromJavaUtilDate(new java.util.Date())); // Use Spanner Date\nstmt.executeUpdate();",
+      "description": "While both MySQL and Spanner support the DATE data type, use the Spanner JDBC driver's specific date handling for consistency. This involves converting a Java `java.util.Date` to a `com.google.cloud.Date` object before setting it in the PreparedStatement. Since Spanner doesn't have AUTO_INCREMENT, you'll need a separate ID generation strategy."
+    },
+
+
+    {
+      "functionality": "ResultSet Metadata with JDBC",
+      "source_code": "Statement stmt = conn.createStatement();\nResultSet rs = stmt.executeQuery(\"SELECT * FROM employees\");\nResultSetMetaData metaData = rs.getMetaData();\nint columnCount = metaData.getColumnCount();\nfor (int i = 1; i <= columnCount; i++) {\n  String columnName = metaData.getColumnName(i);\n  String columnType = metaData.getColumnTypeName(i);\n  // ... process column metadata\n}",
+      "mysql_schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(255), salary DECIMAL, hire_date DATE);",
+      "spanner_schema": "CREATE TABLE employees (\n  id INT64 NOT NULL,\n  name STRING(MAX),\n  salary NUMERIC,\n  hire_date DATE\n) PRIMARY KEY(id);",
+      "ground_truth_solution": "Statement stmt = conn.createStatement();\nResultSet rs = stmt.executeQuery(\"SELECT * FROM employees\");\nResultSetMetaData metaData = rs.getMetaData();\nint columnCount = metaData.getColumnCount();\nfor (int i = 1; i <= columnCount; i++) {\n  String columnName = metaData.getColumnName(i);\n  String columnType = metaData.getColumnTypeName(i);\n  // ... (no changes needed for metadata processing with JDBC)\n}",
+      "description": "When using `ResultSetMetaData` with the Spanner JDBC driver, no specific adjustments are typically needed for metadata processing, as the driver handles the mapping of data types and column names."
+    },
+
+
+    {
+      "functionality": "Batch Updates with JDBC",
+      "source_code": "String sql = \"UPDATE accounts SET balance = balance + ? WHERE id = ?\";\nPreparedStatement stmt = conn.prepareStatement(sql);\nconn.setAutoCommit(false); // Start a transaction\nfor (Account account : accountsToUpdate) {\n  stmt.setBigDecimal(1, account.getAmount());\n  stmt.setInt(2, account.getId());\n  stmt.addBatch();\n}\nstmt.executeBatch();\nconn.commit();",
+      "mysql_schema": "CREATE TABLE accounts (id INT PRIMARY KEY, balance DECIMAL);",
+      "spanner_schema": "CREATE TABLE accounts (\n  id INT64 NOT NULL,\n  balance NUMERIC\n) PRIMARY KEY(id);",
+      "ground_truth_solution": "String sql = \"UPDATE accounts SET balance = balance + ? WHERE id = ?\";\nPreparedStatement stmt = conn.prepareStatement(sql);\nconn.setAutoCommit(false); // Start a transaction\nfor (Account account : accountsToUpdate) {\n  stmt.setBigDecimal(1, account.getAmount());\n  stmt.setLong(2, account.getId());\n  stmt.addBatch();\n}\nstmt.executeBatch();\nconn.commit();",
+      "description": "The Spanner JDBC driver supports batch updates similar to MySQL. Ensure the tool correctly handles the transaction and the `executeBatch()` method."
+    },
+
+
+    {
+      "functionality": "Transactions with JDBC",
+      "source_code": "conn.setAutoCommit(false);\ntry {\n  // ... perform multiple DML statements\n  conn.commit();\n} catch (SQLException e) {\n  conn.rollback();\n}",
+      "mysql_schema": "...",
+      "spanner_schema": "...",
+      "ground_truth_solution": "conn.setAutoCommit(false);\ntry {\n  // ... perform multiple DML statements (using PreparedStatement)\n  conn.commit();\n} catch (SQLException e) {\n  conn.rollback();\n}",
+      "description": "The Spanner JDBC driver supports transactions similar to MySQL. The tool should correctly identify the transaction boundaries and use the standard JDBC methods (`setAutoCommit`, `commit`, `rollback`) for transaction management."
+    }
+  ]

@@ -29,31 +29,10 @@ from textwrap import dedent
 from example_database import ExampleDb
 from collections import defaultdict
 
-# Define a custom log format
-log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-log_datefmt = "%Y-%m-%d %H:%M:%S"
+from logger_config import setup_logger
 
-# Create a logger instance
-logger = logging.getLogger(__name__)
-
-# Set the log level to capture all log messages
-logger.setLevel(level=logging.DEBUG)
-
-# Create a handler for console output
-# Create a file handler (optional, logs to a file)
-file_handler = logging.FileHandler('gemini_migration.log')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter(log_format, log_datefmt))
-
-# Create a console handler (optional, logs to the console)
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter(log_format, log_datefmt))
-console_handler.setLevel(logging.ERROR)  # On
-
-# Add the console handler and file handler to the logger
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-
+# Setup logger for this module
+logger = setup_logger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class FileAnalysis:
