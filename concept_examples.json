@@ -1,8 +1,8 @@
 [
   {
     "id": 1,
-    "example": "ID generation for a table",
-    "rewrite": "Spanner fully supports automatic ID generation.  It does so using a sequenmce to automatically generate the ID.  Note that the sequence generates random (bit-reversed) integers, not sequential integers as in other database engines."
+    "example": "How to migrate from `AUTO_INCREMENT` in MySQL to spanner?",
+    "rewrite": "Cloud Spanner offers two schema-level configurations for generating primary keys, eliminating the need for application-side logic:\n\n**Option 1: UUIDs**\n\nTo automatically generate UUIDs, define the column as: \n\n```example\nCOLUMN_NAME STRING(LENGTH) DEFAULT (GENERATE_UUID())\n```\n\n**Option 2: Bit-reversed Sequences**\n\nUse the bit-reversed sequence for key generation in an INT64 column. \n\n```example\nCREATE SEQUENCE SingerIdSequence OPTIONS (sequence_kind=\"bit_reversed_positive\");\nCREATE TABLE Singers (\n    SingerId INT64 DEFAULT (GET_NEXT_SEQUENCE_VALUE(SEQUENCE SingerIdSequence)),\n    Name STRING(MAX),\n    Rank INT64\n) PRIMARY KEY (SingerId);\n```\n\nThese approaches improve performance and scalability by evenly distributing write operations. If any of the DDL is not configured in the new spanner schema, modify the applicaiton code to use the client side generation of id."
   },
   {
     "id": 2,

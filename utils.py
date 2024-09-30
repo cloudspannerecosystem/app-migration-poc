@@ -128,7 +128,7 @@ async def parse_json_with_retries(llm, original_prompt: str, response: str, retr
                 return result
             else:
                 error = "The output is not in the desired format, top-level object is not a dictionary"
-                raise e
+                raise Exception(error)
         except Exception as e:
             logger.warning("JSON parsing error for item %s (attempt %d/%d): %s", identifier, i + 1, retries, e)
             print(f"Attempting to correct JSON parsing error for item {identifier} (attempt {i + 1}/{retries}): {e}")

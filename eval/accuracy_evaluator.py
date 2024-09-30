@@ -26,6 +26,7 @@ from textwrap import dedent
 import torch
 from transformers import RobertaTokenizer, RobertaModel
 from sklearn.metrics.pairwise import cosine_similarity
+from app_migrator_analysis import MigrationSummarizer
 from logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -117,7 +118,7 @@ class AccuracyEvaluator:
         }
 
         #ToDo: Use RAG Powered evaluator from app migration analysis
-        self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
+        self.migration_summarizer = MigrationSummarizer(google_generative_ai_api_key)
         self._code_and_description_evaluator = CodeDescriptionEvaluator()
 
     async def convert_code(self, eval_data_point: TestCase) -> Dict:
@@ -150,11 +151,11 @@ class AccuracyEvaluator:
             ```
             """
 
-        response = await self._llm.ainvoke(prompt)
-        response_parsed = await parse_json_with_retries(self._llm, prompt, response, 3, 'evaluation_code_accuracy')
+        response = await self.migration_summarizer.migration_code_conversion_invoke(prompt, eval_data_point.source_code, eval_data_point.mysql_schema
+                                                                                    ,eval_data_point.spanner_schema , 'evaluation_code_accuracy')
 
         logger.info("Evaluated Test: %s", eval_data_point.functionality)
-        return response_parsed
+        return response
 
     async def evaluate_accuracy(self, test_file: str = 'test_dataset.json', batch_size=3):
         logger.info("Starting generating recommendations...")

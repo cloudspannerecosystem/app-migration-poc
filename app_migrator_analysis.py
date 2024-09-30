@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils import list_files, replace_and_save_html # type: ignore
+from utils import list_files, replace_and_save_html, parse_json_with_retries # type: ignore
 import os
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 import dataclasses
@@ -79,9 +79,92 @@ class MigrationSummarizer:
         }
 
         self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
+        self._llm_flash = VertexAI(model_name="gemini-1.5-flash-001", safety_settings=safety_settings)
 
         self._code_example_db = ExampleDb.CodeExampleDb()
         self._context_example_db = ExampleDb.ConceptExampleDb()
+
+    async def migration_code_conversion_invoke(self, original_prompt, source_code, older_schema, new_schema, identifier: str):
+        prompt = f"""
+            You are a Cloud Spanner expert tasked with migrating an application from MySQL JDBC to Spanner-JDBC. 
+
+            Analyze the provided code, old MySQL schema, and new Spanner schema. The schemas may be extensive as they represent the full database, 
+            so focus your analysis on the DDL statements relevant to the provided code snippet. Identify areas where the application logic needs to be adapted
+            for Spanner and formulate specific questions requiring human expertise. 
+            
+            Only ask crisp and concise questions where you need actual guidance, human input, or assistance with complex functionalities. Focus on practical challenges and 
+            differences between MySQL and Spanner JDBC, such as:
+            * How specific MySQL features or queries can be replicated in Spanner.
+            * Workarounds for unsupported MySQL features in Spanner.
+            * Necessary code changes due to schema differences.
+
+            **Example questions:**
+
+            * "MySQL handles X this way... how can we achieve the same result in Spanner?"
+            * "Feature Y is not supported in Spanner... what are the alternative approaches?"
+
+            **Input:**
+
+            * `Source_code`: {source_code}
+            * `Older_schema`: {older_schema}
+            * `Newer_schema`: {new_schema}
+
+            **Output:**
+            ```json
+            {{
+                "questions": [
+                    "Question 1",
+                    "Question 2"
+                    // more questions
+                ]
+            }}
+            ```
+            """
+
+        content = await self._llm_flash.ainvoke(prompt)
+        content = await parse_json_with_retries(self._llm_flash, prompt, content, 2, "analysis-ask-questions")
+
+        questions = content['questions']
+
+        concept_search_results = []
+        for question in questions:
+            relevant_records = self._context_example_db.search(question, 0.25, 2)
+            concept_search_results.append(relevant_records.values())
+
+        question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(questions, concept_search_results)
+
+        logger.info("Question with Answer Prompt: %s", question_with_answer_prompt)
+        
+        final_prompt = original_prompt + "\n" + question_with_answer_prompt
+        
+        content = await self._llm.ainvoke(final_prompt)
+        content = await parse_json_with_retries(self._llm, prompt, content, 2, identifier)
+        
+        return content
+
+    def format_questions_and_results(questions, search_results):
+        """
+        Formats questions and search results into a string for the LLM prompt.
+
+        Args:
+            questions: A list of questions.
+            search_results: A dictionary mapping questions to lists of search results.
+
+        Returns:
+            A formatted string.
+        """
+
+        formatted_string = "Use the following questions and their answers which are required for the code conversions"
+        formatted_string += "**Questions and Search Results:**\n\n"
+
+        for i, question in enumerate(questions):
+            if (len(search_results[i])):
+                formatted_string += f"* **Question {i+1}:** {question}\n"
+                for j, result in enumerate(search_results[i]):
+                    formatted_string += f"    * **Search Result {j+1}:** {result}\n"
+                    formatted_string += "\n"
+
+        return formatted_string
 
     async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
