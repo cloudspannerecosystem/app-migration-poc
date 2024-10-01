@@ -13,6 +13,7 @@
 # limitations under the License.
 import logging
 
+
 def setup_logger(name=__name__):
     # Define a custom log format
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -23,7 +24,7 @@ def setup_logger(name=__name__):
     logger.setLevel(logging.DEBUG)  # Capture all log messages
 
     # Create a file handler for logging to a file
-    file_handler = logging.FileHandler('gemini_migration.log')
+    file_handler = logging.FileHandler("gemini_migration.log")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(log_format, log_datefmt))
 

@@ -12,27 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils import list_files, replace_and_save_html, parse_json_with_retries, is_dao_class # type: ignore
-import os
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+import asyncio
 import dataclasses
 import json
-from dependency_analyzer.java_analyze import JavaAnalyzer
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from langchain_google_vertexai import VertexAI
-from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
-import asyncio
-import aiofiles
-import logging
+import os
 import time
-from textwrap import dedent
-from example_database import ExampleDb
 from collections import defaultdict
+from textwrap import dedent
+from typing import (Any, Callable, Dict, Iterable, List, Optional, Tuple, Type,
+                    Union)
 
+import aiofiles
+from langchain_google_vertexai import (HarmBlockThreshold, HarmCategory,
+                                       VertexAI)
+
+from dependency_analyzer.java_analyze import JavaAnalyzer
+from example_database import ExampleDb
 from logger_config import setup_logger
+from utils import (is_dao_class, list_files,  # type: ignore
+                   parse_json_with_retries, replace_and_save_html)
 
 # Setup logger for this module
 logger = setup_logger(__name__)
+
 
 @dataclasses.dataclass(frozen=True)
 class FileAnalysis:
@@ -46,10 +48,12 @@ class FileAnalysis:
     notes: List[str]
     warnings: List[str]
 
+
 @dataclasses.dataclass(frozen=True)
 class FileMetadata:
     filename: str
     line_count: int
+
 
 @dataclasses.dataclass(frozen=True)
 class MethodSignatureChange:
@@ -58,8 +62,13 @@ class MethodSignatureChange:
     new_signature: str
     explanation: str
 
+
 class MigrationSummarizer:
-    def __init__(self, google_generative_ai_api_key: Optional[str] = None, gemini_version = "gemini-1.5-pro-001"):
+    def __init__(
+        self,
+        google_generative_ai_api_key: Optional[str] = None,
+        gemini_version="gemini-1.5-pro-001",
+    ):
         """
         Initializes the MigrationSummarizer with an optional Google Generative AI API key.
         Sets up the language model for generating migration suggestions.
@@ -79,12 +88,16 @@ class MigrationSummarizer:
         }
 
         self._llm = VertexAI(model_name=gemini_version, safety_settings=safety_settings)
-        self._llm_flash = VertexAI(model_name="gemini-1.5-flash-001", safety_settings=safety_settings)
+        self._llm_flash = VertexAI(
+            model_name="gemini-1.5-flash-001", safety_settings=safety_settings
+        )
 
         self._code_example_db = ExampleDb.CodeExampleDb()
         self._context_example_db = ExampleDb.ConceptExampleDb()
 
-    async def migration_code_conversion_invoke(self, original_prompt, source_code, older_schema, new_schema, identifier: str):
+    async def migration_code_conversion_invoke(
+        self, original_prompt, source_code, older_schema, new_schema, identifier: str
+    ):
         prompt = f"""
             You are a Cloud Spanner expert tasked with migrating an application from MySQL JDBC to Spanner-JDBC. 
 
@@ -122,31 +135,37 @@ class MigrationSummarizer:
             """
 
         content = await self._llm_flash.ainvoke(prompt)
-        content = await parse_json_with_retries(self._llm_flash, prompt, content, 2, "analysis-ask-questions")
+        content = await parse_json_with_retries(
+            self._llm_flash, prompt, content, 2, "analysis-ask-questions"
+        )
 
-        questions = content['questions']
+        questions = content["questions"]
 
         concept_search_results = []
         answers_present = False
-        
+
         for question in questions:
             relevant_records = self._context_example_db.search(question, 0.25, 2)
             concept_search_results.append(relevant_records.values())
 
-            if (len(relevant_records.values) > 0):
+            if len(relevant_records.values) > 0:
                 answers_present = True
 
-        question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(questions, concept_search_results)
+        question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
+            questions, concept_search_results
+        )
 
         logger.info("Question with Answer Prompt: %s", question_with_answer_prompt)
-        
+
         final_prompt = original_prompt
         if answers_present:
             final_prompt = original_prompt + "\n" + question_with_answer_prompt
-        
+
         content = await self._llm.ainvoke(final_prompt)
-        content = await parse_json_with_retries(self._llm, prompt, content, 2, identifier)
-        
+        content = await parse_json_with_retries(
+            self._llm, prompt, content, 2, identifier
+        )
+
         return content
 
     def format_questions_and_results(questions, search_results):
@@ -165,7 +184,7 @@ class MigrationSummarizer:
         formatted_string += "**Questions and Search Results:**\n\n"
 
         for i, question in enumerate(questions):
-            if (len(search_results[i])):
+            if len(search_results[i]):
                 formatted_string += f"* **Question {i+1}:** {question}\n"
                 for j, result in enumerate(search_results[i]):
                     formatted_string += f"    * **Search Result {j+1}:** {result}\n"
@@ -173,7 +192,14 @@ class MigrationSummarizer:
 
         return formatted_string
 
-    async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None, old_schema: str = None, new_schema: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
+    async def analyze_file(
+        self,
+        filepath: str,
+        file_content: Optional[str] = None,
+        method_changes: str = None,
+        old_schema: str = None,
+        new_schema: str = None,
+    ) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
         Analyzes a given file to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
@@ -191,22 +217,34 @@ class MigrationSummarizer:
             async with aiofiles.open(filepath, "r", encoding="utf-8") as f:
                 file_content = await f.read()
         except UnicodeDecodeError as e:
-            print ("Reading Fife Error: ", str(e))
+            print("Reading Fife Error: ", str(e))
             # Return empty lists on decode error
             return [], [], FileMetadata(filepath, None)
 
         file_metadata = FileMetadata(
             filename=filepath,
-            line_count=file_content.count('\n'),
+            line_count=file_content.count("\n"),
         )
 
         if is_dao_class(filepath, file_content):
-            prompt = self.get_prompt_for_dao_class(file_content, filepath, method_changes, old_schema, new_schema)
-            response = await self.migration_code_conversion_invoke(prompt, file_content, old_schema, new_schema, "analyze-dao-class- " + filepath)
+            prompt = self.get_prompt_for_dao_class(
+                file_content, filepath, method_changes, old_schema, new_schema
+            )
+            response = await self.migration_code_conversion_invoke(
+                prompt,
+                file_content,
+                old_schema,
+                new_schema,
+                "analyze-dao-class- " + filepath,
+            )
         else:
-            prompt = self.get_prompt_for_non_dao_class(file_content, filepath, method_changes)
+            prompt = self.get_prompt_for_non_dao_class(
+                file_content, filepath, method_changes
+            )
             response = await self._llm_flash.ainvoke(prompt)
-            response = await parse_json_with_retries(self._llm_flash, prompt, response, 3, filepath)
+            response = await parse_json_with_retries(
+                self._llm_flash, prompt, response, 3, filepath
+            )
 
         if isinstance(response, dict):
             response_parsed = [response]
@@ -217,35 +255,44 @@ class MigrationSummarizer:
         method_signatures = []
 
         for res in response_parsed:
-            file_modifications = res.get('file_modifications', [])
-            methods = res.get('method_signature_changes', [])
+            file_modifications = res.get("file_modifications", [])
+            methods = res.get("method_signature_changes", [])
 
             for mod in file_modifications:
-                file_analysis.append(FileAnalysis(
-                    filename=filepath,
-                    code_sample=mod.get('code_sample'),
-                    start_line=int(mod.get('start_line', '-1')),
-                    end_line=int(mod.get('end_line', '-1')),
-                    suggested_change=mod.get('suggested_change'),
-                    description=mod.get('description'),
-                    complexity=mod.get('complexity'),
-                    notes=[x["rewrite"] for x in
-                           self._context_example_db.search(mod.get('description')).values()],
-                    warnings=mod.get('warnings', []),
-                ))
+                file_analysis.append(
+                    FileAnalysis(
+                        filename=filepath,
+                        code_sample=mod.get("code_sample"),
+                        start_line=int(mod.get("start_line", "-1")),
+                        end_line=int(mod.get("end_line", "-1")),
+                        suggested_change=mod.get("suggested_change"),
+                        description=mod.get("description"),
+                        complexity=mod.get("complexity"),
+                        notes=[
+                            x["rewrite"]
+                            for x in self._context_example_db.search(
+                                mod.get("description")
+                            ).values()
+                        ],
+                        warnings=mod.get("warnings", []),
+                    )
+                )
 
             for method in methods:
-                method_signatures.append(MethodSignatureChange(
-                    filename=filepath,
-                    original_signature=method.get('original_signature'),
-                    new_signature=method.get('new_signature'),
-                    explanation=method.get('explanation'),
-                ))
+                method_signatures.append(
+                    MethodSignatureChange(
+                        filename=filepath,
+                        original_signature=method.get("original_signature"),
+                        new_signature=method.get("new_signature"),
+                        explanation=method.get("explanation"),
+                    )
+                )
 
         return file_analysis, method_signatures, file_metadata
-    
 
-    def get_prompt_for_non_dao_class(self, file_content: str, filepath: str, method_changes:str) -> str:
+    def get_prompt_for_non_dao_class(
+        self, file_content: str, filepath: str, method_changes: str
+    ) -> str:
         prompt = f"""
             You are tasked with adapting a Java class to function correctly within an application that has migrated its persistence layer to Cloud Spanner.
 
@@ -320,14 +367,21 @@ class MigrationSummarizer:
         """
 
         return prompt
-    
-    def get_prompt_for_dao_class(self, file_content: str, filepath: str, method_changes:str, old_schema: str, new_schema:str) -> str:
+
+    def get_prompt_for_dao_class(
+        self,
+        file_content: str,
+        filepath: str,
+        method_changes: str,
+        old_schema: str,
+        new_schema: str,
+    ) -> str:
         examples_prompt = ""
         relevant_records = self._code_example_db.search(file_content)
-        
+
         if relevant_records:
             example_prompt = dedent(
-                    """
+                """
                     Code like the following
                     ```
                     {example}
@@ -338,16 +392,16 @@ class MigrationSummarizer:
                     ```
                     {rewrite}
                     ```
-                    """)
-            examples = [
-                example_prompt.format(**record)
-                for record in relevant_records
-            ]
-            examples_prompt_template = dedent("""
+                    """
+            )
+            examples = [example_prompt.format(**record) for record in relevant_records]
+            examples_prompt_template = dedent(
+                """
             The following are examples of how to rewrite code for Spanner.
 
             {examples}
-            """)
+            """
+            )
             examples_prompt = examples_prompt_template.format(examples=examples)
 
         prompt = f"""
@@ -433,10 +487,17 @@ class MigrationSummarizer:
             {method_changes}
             ```
             """
-        
-        return prompt;
 
-    async def analyze_project(self, directory: str, old_schema_file: str = "", new_schema_file: str = "", max_threads = 2, batch_size=100) -> List[List[FileAnalysis]]:
+        return prompt
+
+    async def analyze_project(
+        self,
+        directory: str,
+        old_schema_file: str = "",
+        new_schema_file: str = "",
+        max_threads=2,
+        batch_size=100,
+    ) -> List[List[FileAnalysis]]:
         """
         Analyzes all files in a given project directory to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
@@ -470,7 +531,9 @@ class MigrationSummarizer:
         # Initialize a dictionary to store the results of analyzed files (dynamic programming cache)
         dp = {}
 
-        logger.info("Project analysis started. Analyzing files in directory: %s", directory)
+        logger.info(
+            "Project analysis started. Analyzing files in directory: %s", directory
+        )
         logger.info("Total number of dependency groups: %s", len(list_of_lists))
         logger.info("Dependency group sizes: %s", [len(x) for x in list_of_lists])
 
@@ -507,13 +570,15 @@ class MigrationSummarizer:
             result = []
 
             for child in G.successors(node):
-                result.append(dp[child]);
+                result.append(dp[child])
 
             result = [item for sublist in result for item in sublist]
             change_dicts = [change.__dict__ for change in result]
             json_string = json.dumps(change_dicts, indent=2)
 
-            file_analysis, methods_changes, file_metadata = await self.analyze_file(node, json_string, old_schema, new_schema)
+            file_analysis, methods_changes, file_metadata = await self.analyze_file(
+                node, json_string, old_schema, new_schema
+            )
 
             dp[node] = methods_changes
 
@@ -533,31 +598,44 @@ class MigrationSummarizer:
             return results
 
         for dependencies in list_of_lists:
-            logger.info('Processing dependency group with %s files', len(dependencies))
+            logger.info("Processing dependency group with %s files", len(dependencies))
             group_start_time = time.time()
             # Batching logic (improved)
             for i in range(0, len(dependencies), batch_size):
-                logger.info('Batch Start Index- %s', str(i))
-                batch = dependencies[i:i + batch_size]
+                logger.info("Batch Start Index- %s", str(i))
+                batch = dependencies[i : i + batch_size]
 
                 # Schedule the batch for processing
                 batch_results = await process_batch(batch)
 
-                summaries.extend([x[0] for x in batch_results])  # Collect results from all batches
+                summaries.extend(
+                    [x[0] for x in batch_results]
+                )  # Collect results from all batches
                 files_metadata.extend([x[1] for x in batch_results])
 
             group_end_time = time.time()
             group_execution_time = group_end_time - group_start_time
-            logger.info("Dependency group processing completed. Execution time: %s seconds", group_execution_time)
+            logger.info(
+                "Dependency group processing completed. Execution time: %s seconds",
+                group_execution_time,
+            )
 
         end_time = time.time()
         total_execution_time = end_time - start_time
 
-        logger.info("Project analysis completed. Total execution time: %s seconds", total_execution_time)
+        logger.info(
+            "Project analysis completed. Total execution time: %s seconds",
+            total_execution_time,
+        )
 
         return summaries, files_metadata
 
-    async def summarize_report(self, summaries: List[List[FileAnalysis]], files_metadata: List[FileMetadata], output_file: str = 'spanner_migration_report.html'):
+    async def summarize_report(
+        self,
+        summaries: List[List[FileAnalysis]],
+        files_metadata: List[FileMetadata],
+        output_file: str = "spanner_migration_report.html",
+    ):
         """
         Generates a comprehensive HTML report summarizing the analysis of code changes for a Cloud Spanner migration.
 
@@ -572,7 +650,7 @@ class MigrationSummarizer:
         6. Renders the final HTML report by populating a template with the collected data.
 
         Args:
-            summaries: A list of lists, where each inner list contains `FileAnalysis` objects representing code 
+            summaries: A list of lists, where each inner list contains `FileAnalysis` objects representing code
                     changes for a specific file.
             files_metadata: A list of `FileMetadata` objects containing information about the analyzed files.
             output_file: The name of the output HTML file. Defaults to 'spanner_migration_report.html'.
@@ -584,51 +662,69 @@ class MigrationSummarizer:
 
         summaries = [item for sublist in summaries for item in sublist]
         summaries_dictionary_list = [change.__dict__ for change in summaries]
-        summaries_dictionary_list = [{**item, 'id': i} for i, item in enumerate(summaries_dictionary_list)]
+        summaries_dictionary_list = [
+            {**item, "id": i} for i, item in enumerate(summaries_dictionary_list)
+        ]
 
         report_data = {}
-        
-        async_io_results = await asyncio.gather(self.__summarize_report_overview(summaries_dictionary_list), 
-                                       self.__summarize_report_tasks(summaries_dictionary_list))
-        
+
+        async_io_results = await asyncio.gather(
+            self.__summarize_report_overview(summaries_dictionary_list),
+            self.__summarize_report_tasks(summaries_dictionary_list),
+        )
 
         report_overview = async_io_results[0]
 
         logger.debug("Report Overview: %s", report_overview)
         report_tasks, tasks_by_efforts = async_io_results[1]
 
-        code_lines_by_complexity = dict((k, sum(int(item['numberOfLines']) for item in report_tasks['tasks'] 
-                                           if item['complexity'] == k)) for k in set(item['complexity'] for item in report_tasks['tasks'] ))
+        code_lines_by_complexity = dict(
+            (
+                k,
+                sum(
+                    int(item["numberOfLines"])
+                    for item in report_tasks["tasks"]
+                    if item["complexity"] == k
+                ),
+            )
+            for k in set(item["complexity"] for item in report_tasks["tasks"])
+        )
 
         logger.debug("Tasks by efforts: %s", tasks_by_efforts)
 
-
         report_data.update(report_overview)
         logger.info("%s", report_data)
-        report_data['efforts'] = tasks_by_efforts
-        report_data['notes'] = report_tasks['misc_efforts']
+        report_data["efforts"] = tasks_by_efforts
+        report_data["notes"] = report_tasks["misc_efforts"]
 
         logger.info("%s", report_data)
-        report_tasks_response = await self.__summarize_report_tasks_description(summaries_dictionary_list, report_tasks['tasks'])
+        report_tasks_response = await self.__summarize_report_tasks_description(
+            summaries_dictionary_list, report_tasks["tasks"]
+        )
 
-
-        report_data['tasks'] = report_tasks_response
-        report_data['code_lines_by_complexity'] = code_lines_by_complexity
+        report_data["tasks"] = report_tasks_response
+        report_data["code_lines_by_complexity"] = code_lines_by_complexity
 
         app_data = {
-            'files': files_metadata,
-            'linesOfCode': sum(x.line_count for x in files_metadata),
+            "files": files_metadata,
+            "linesOfCode": sum(x.line_count for x in files_metadata),
         }
 
         logger.info(report_data)
 
-        replace_and_save_html('result/migration_template.html', output_file, {
-            'report_data': report_data,
-            'app_data': app_data,
-            'file_analyses': file_analyses,
-        })
+        replace_and_save_html(
+            "result/migration_template.html",
+            output_file,
+            {
+                "report_data": report_data,
+                "app_data": app_data,
+                "file_analyses": file_analyses,
+            },
+        )
 
-    async def __summarize_report_tasks_description(self, summaries_dictionary_list: List, report_tasks: List, batch_size: int = 10) -> Dict:
+    async def __summarize_report_tasks_description(
+        self, summaries_dictionary_list: List, report_tasks: List, batch_size: int = 10
+    ) -> Dict:
         """
         Generates detailed descriptions for each task in the migration report.
 
@@ -686,22 +782,32 @@ class MigrationSummarizer:
         """
 
         for item in report_tasks:
-            item['code_changes'] = [summaries_dictionary_list[index] for index in item['indexes']]  # Replace with actual objects
-            del item['indexes'] 
+            item["code_changes"] = [
+                summaries_dictionary_list[index] for index in item["indexes"]
+            ]  # Replace with actual objects
+            del item["indexes"]
 
         final_results = []
 
         async def process_task(task):
             """Processes a single task and generates its description."""
-            logger.info("Processing Task: %s", task['category'])
-            prompt = prompt_template.format(category=task['category'], code_changes=task['code_changes'])
+            logger.info("Processing Task: %s", task["category"])
+            prompt = prompt_template.format(
+                category=task["category"], code_changes=task["code_changes"]
+            )
             response = await self._llm.ainvoke(prompt)
-            response = await parse_json_with_retries(self._llm, prompt, response, 4, 'summarize_report_task_' + task['category'])
+            response = await parse_json_with_retries(
+                self._llm,
+                prompt,
+                response,
+                4,
+                "summarize_report_task_" + task["category"],
+            )
             logger.info("Task processing completed")
-            return response 
+            return response
 
         for i in range(0, len(report_tasks), batch_size):
-            batch = report_tasks[i:i + batch_size]
+            batch = report_tasks[i : i + batch_size]
             tasks_future = [process_task(task) for task in batch]
             # Run tasks concurrently and get results
             results = await asyncio.gather(*tasks_future)
@@ -713,13 +819,13 @@ class MigrationSummarizer:
         """
         Generates an overview report summarizing the migration analysis from MySQL JDBC to Cloud Spanner JDBC.
 
-        This method leverages an LLM prompt to analyze a list of code changes and generate a comprehensive 
-        overview report. The report includes information like application details, source and target database assessment, 
+        This method leverages an LLM prompt to analyze a list of code changes and generate a comprehensive
+        overview report. The report includes information like application details, source and target database assessment,
         risk assessment, effort estimation, and code impact.
 
         Args:
-            summaries_dictionary: A list of dictionaries, where each dictionary represents a code change 
-                                and contains information like code sample, suggested change, complexity, 
+            summaries_dictionary: A list of dictionaries, where each dictionary represents a code change
+                                and contains information like code sample, suggested change, complexity,
                                 description, and line numbers.
 
         Returns:
@@ -774,20 +880,22 @@ class MigrationSummarizer:
             """
 
         response = await self._llm.ainvoke(prompt)
-        response = await parse_json_with_retries(self._llm, prompt, response, 2, 'summarize_report_overview')
+        response = await parse_json_with_retries(
+            self._llm, prompt, response, 2, "summarize_report_overview"
+        )
 
         return response
-    
+
     async def __summarize_report_tasks(self, summaries_dictionary: List) -> Dict:
         """
         Categorizes and summarizes code changes required for migrating an application from MySQL JDBC to Cloud Spanner JDBC.
 
-        This method uses an LLM prompt to analyze a list of code changes, group them into categories, 
+        This method uses an LLM prompt to analyze a list of code changes, group them into categories,
         and provide a summary of the migration tasks.
 
         Args:
-            summaries_dictionary: A list of dictionaries, where each dictionary represents a code change 
-                                and contains information like code sample, suggested change, complexity, 
+            summaries_dictionary: A list of dictionaries, where each dictionary represents a code change
+                                and contains information like code sample, suggested change, complexity,
                                 description, and line numbers.
 
         Returns:
@@ -795,7 +903,7 @@ class MigrationSummarizer:
                 - A dictionary containing the categorized tasks in the specified JSON format.
                 - A dictionary containing the tasks grouped by effort.
         """
-            
+
         prompt_template = """
             You are a Cloud Spanner expert specializing in migrating applications from MySQL JDBC. I need your help categorizing code changes required for a migration to Spanner JDBC.
 
@@ -864,31 +972,37 @@ class MigrationSummarizer:
             ```
         """
 
-        prompt = prompt_template.format(summaries_dictionary=summaries_dictionary, records=len(summaries_dictionary))
+        prompt = prompt_template.format(
+            summaries_dictionary=summaries_dictionary, records=len(summaries_dictionary)
+        )
         response = await self._llm.ainvoke(prompt)
-        response = await parse_json_with_retries(self._llm, prompt, response, 4, 'summarize_report_tasks')
+        response = await parse_json_with_retries(
+            self._llm, prompt, response, 4, "summarize_report_tasks"
+        )
 
         # Define a custom sort order for effort
-        effort_order = {'Major': 1, 'Moderate': 2, 'Minor': 3}
-        
+        effort_order = {"Major": 1, "Moderate": 2, "Minor": 3}
+
         # Sort the data based on the effort field
-        sorted_tasks = sorted(response['tasks'], key=lambda x: effort_order.get(x['effort'], 4))
-        
+        sorted_tasks = sorted(
+            response["tasks"], key=lambda x: effort_order.get(x["effort"], 4)
+        )
+
         # Group the tasks by effort level
         grouped_data = {}
         for item in sorted_tasks:
-            effort = item['effort']
+            effort = item["effort"]
             if effort not in grouped_data:
                 grouped_data[effort] = []
-            grouped_data[effort].append({
-                'category': item['category'],
-                'description': item['description'],
-                'complexity': item['complexity'],
-                'numberOfLines': item['numberOfLines']
-            })
+            grouped_data[effort].append(
+                {
+                    "category": item["category"],
+                    "description": item["description"],
+                    "complexity": item["complexity"],
+                    "numberOfLines": item["numberOfLines"],
+                }
+            )
 
-        response['tasks'] = sorted_tasks
+        response["tasks"] = sorted_tasks
 
         return response, grouped_data
-        
-

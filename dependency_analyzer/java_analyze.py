@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tree_sitter # type: ignore
 import os
-import tree_sitter_java as tsjava # type: ignore
-import networkx as nx # type: ignore
+
+import networkx as nx  # type: ignore
+import tree_sitter  # type: ignore
+import tree_sitter_java as tsjava  # type: ignore
+
 
 class JavaAnalyzer:
     JAVA_LANGUAGE = tree_sitter.Language(tsjava.language())
@@ -38,21 +40,21 @@ class JavaAnalyzer:
         public_classes = []
 
         # Check if the node represents a class or interface declaration
-        if node.type in ['class_declaration', 'interface_declaration']:
+        if node.type in ["class_declaration", "interface_declaration"]:
             has_public_modifier = False
 
             # Check for the 'public' modifier
             for child in node.children:
-                if child.type == 'modifiers':
+                if child.type == "modifiers":
                     has_public_modifier = any(
-                        modifier.type == 'public' for modifier in child.children
+                        modifier.type == "public" for modifier in child.children
                     )
                     break
 
             if has_public_modifier:
-                class_name_node = node.child_by_field_name('name')
+                class_name_node = node.child_by_field_name("name")
                 if class_name_node:
-                    public_classes.append(class_name_node.text.decode('utf-8'))
+                    public_classes.append(class_name_node.text.decode("utf-8"))
 
         # Recursively search child nodes
         for child in node.children:
@@ -71,7 +73,7 @@ class JavaAnalyzer:
             list: A list of public class or interface names found in the file.
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 source_code = file.read()
                 tree = self.parser.parse(bytes(source_code, "utf8"))
                 root_node = tree.root_node
@@ -96,17 +98,18 @@ class JavaAnalyzer:
         file_to_class = {}
         class_to_file = {}
 
-
-        print(f"Analyzing project directory: {project_dir}") 
+        print(f"Analyzing project directory: {project_dir}")
         for root, dirs, files in os.walk(project_dir):
-            dirs[:] = [d for d in dirs if not (d.startswith('.') or d.startswith('test'))]
+            dirs[:] = [
+                d for d in dirs if not (d.startswith(".") or d.startswith("test"))
+            ]
 
             for file in files:
-                if file.endswith('.java') or file.endswith('.xml'):
+                if file.endswith(".java") or file.endswith(".xml"):
                     file_path = os.path.join(root, file)
                     public_classes = self.find_public_classes_in_file(file_path)
                     file_to_class[file_path] = public_classes
-                    
+
                     if public_classes:
                         for class_name in public_classes:
                             class_to_file[class_name] = file_path
@@ -145,7 +148,7 @@ class JavaAnalyzer:
             set: A set of class or interface names referenced in the file.
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 source_code = file.read()
         except (FileNotFoundError, UnicodeDecodeError) as e:
             print(f"Error processing {file_path}: {e}")
@@ -158,10 +161,23 @@ class JavaAnalyzer:
             if node is None:
                 return
 
-            if node.type in ['field_declaration', 'formal_parameter', 'local_variable_declaration', 'call_expression']:
-                identifier_node = self.get_identifier(node, ['type_identifier', 'generic_type', 'integral_type', 'scoped_type_identifier'])
+            if node.type in [
+                "field_declaration",
+                "formal_parameter",
+                "local_variable_declaration",
+                "call_expression",
+            ]:
+                identifier_node = self.get_identifier(
+                    node,
+                    [
+                        "type_identifier",
+                        "generic_type",
+                        "integral_type",
+                        "scoped_type_identifier",
+                    ],
+                )
                 if identifier_node:
-                    class_references.add(identifier_node.text.decode('utf-8'))
+                    class_references.add(identifier_node.text.decode("utf-8"))
             else:
                 for child in node.children:
                     traverse(child)
@@ -189,17 +205,21 @@ class JavaAnalyzer:
         print("Building dependency graph...")  # Added log
 
         for root, dirs, files in os.walk(project_dir):
-            dirs[:] = [d for d in dirs if not (d.startswith('.') or d.startswith('test'))]
+            dirs[:] = [
+                d for d in dirs if not (d.startswith(".") or d.startswith("test"))
+            ]
             for file in files:
-                if file.endswith('.java'):
+                if file.endswith(".java"):
                     file_path = os.path.join(root, file)
                     used_classes = self.find_used_classes(file_path)
                     for class_name in used_classes:
-                        if class_name in class_to_file and file_path != class_to_file[class_name]:
+                        if (
+                            class_name in class_to_file
+                            and file_path != class_to_file[class_name]
+                        ):
                             G.add_edge(file_path, class_to_file[class_name])
 
-
-        print("Dependency graph construction complete.") 
+        print("Dependency graph construction complete.")
 
         return G
 
@@ -211,7 +231,7 @@ class JavaAnalyzer:
             project_dir (str): The root directory of the Java project.
 
         Returns:
-            tuple: 
+            tuple:
                 - networkx.DiGraph: The dependency graph of the project.
                 - list: A list of lists, where each inner list contains files that can be executed in parallel.
         """
@@ -220,26 +240,27 @@ class JavaAnalyzer:
         def relax_cycles(G):
             # Find all simple cycles
             cycles = list(nx.simple_cycles(G))
-            
+
             # To store edges to be removed
             edges_to_remove = set()
-            
+
             for cycle in cycles:
                 # Arbitrarily choose an edge to remove
                 # In this example, we remove the first edge in the cycle
                 u, v = cycle[0], cycle[1]
                 edges_to_remove.add((u, v))
-            
+
             # Remove the identified edges
             G.remove_edges_from(edges_to_remove)
-            
+
             return edges_to_remove
-        
 
         edges = relax_cycles(G)
 
         if len(edges) > 0:
-            print(f"Detected cyclic dependencies in the project. Relaxed {len(edges)} edges to ensure a valid analysis order.")
+            print(
+                f"Detected cyclic dependencies in the project. Relaxed {len(edges)} edges to ensure a valid analysis order."
+            )
 
         sorted_tasks = list(nx.topological_sort(G))[::-1]
 
@@ -276,7 +297,7 @@ class JavaAnalyzer:
                 >>> group_tasks_optimized(sorted_tasks, G)
                 [[1], [2, 3], [4]]  # Tasks 2 and 3 can be executed in parallel
             """
-              
+
             grouped_tasks = []
             task_to_group = {}
 
