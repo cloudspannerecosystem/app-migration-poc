@@ -8,9 +8,11 @@ fi
 
 # Assign arguments to variables
 SOURCE_DIRECTORY=$1
-ACCESS_KEY_FILE=$2
-OUTPUT_FILE=$3
-GEMINI_VERSION=${4:-gemini-1.5-pro-001}
+MYSQL_SCHEMA_FILE=$2
+SPANNER_SCHEMA_FILE=$3
+ACCESS_KEY_FILE=$4
+OUTPUT_FILE=$5
+GEMINI_VERSION=${6:-gemini-1.5-pro-001}
 
 # Path to this shell script
 # We assume the script is in the same directory as the venv and our Python command
@@ -34,7 +36,7 @@ fi
 source "$VENV_PATH/bin/activate"
 
 # Invoke the Python script with the arguments
-python "$PYTHON_SCRIPT" "$SOURCE_DIRECTORY" "$ACCESS_KEY" "$OUTPUT_FILE" "$GEMINI_VERSION"
+python "$PYTHON_SCRIPT" "$SOURCE_DIRECTORY" "$MYSQL_SCHEMA_FILE" "$SPANNER_SCHEMA_FILE" "$ACCESS_KEY" "$OUTPUT_FILE" "$GEMINI_VERSION"
 
 # Deactivate the virtual environment
 deactivate

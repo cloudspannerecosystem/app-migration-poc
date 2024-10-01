@@ -8,7 +8,7 @@ from app_migrator_analysis import MigrationSummarizer
 
 
 async def generate_migration_report(
-    source_directory, access_key, output_file, gemini_version
+    source_directory, mysql_schema_file, spanner_schema_file, access_key, output_file, gemini_version
 ):
     # Example implementation
 
@@ -23,7 +23,7 @@ async def generate_migration_report(
     summarizer = MigrationSummarizer(access_key, gemini_version)
 
     analysis_start_time = time.time()  # Start timing the analysis
-    summaries, files_metadata = await summarizer.analyze_project(source_directory)
+    summaries, files_metadata = await summarizer.analyze_project(source_directory, mysql_schema_file, spanner_schema_file)
     analysis_end_time = time.time()
     analysis_execution_time = analysis_end_time - analysis_start_time
 
@@ -52,19 +52,21 @@ async def generate_migration_report(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 6:
         print(
-            "Usage: python path_to_your_python_script.py <source_directory> <access_key> <output_file> [<gemini_version>]"
+            "Usage: python path_to_your_python_script.py <source_directory> <mysql_schema_file> <spanner_schema_file> <access_key> <output_file> [<gemini_version>]"
         )
         sys.exit(1)
 
     source_directory = sys.argv[1]
-    access_key = sys.argv[2]
-    output_file = sys.argv[3]
-    gemini_version = sys.argv[4] if len(sys.argv) > 4 else "gemini-1.5-flash-001"
+    mysql_schema_file = sys.argv[2]
+    spanner_schema_file = sys.argv[3]
+    access_key = sys.argv[4]
+    output_file = sys.argv[5]
+    gemini_version = sys.argv[6] if len(sys.argv) >= 6 else "gemini-1.5-flash-001"
 
     asyncio.run(
         generate_migration_report(
-            source_directory, access_key, output_file, gemini_version
+            source_directory, mysql_schema_file, spanner_schema_file, access_key, output_file, gemini_version
         )
     )

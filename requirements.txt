@@ -16,3 +16,4 @@ scikit-learn
 javalang
 black
 isort
+pathlib

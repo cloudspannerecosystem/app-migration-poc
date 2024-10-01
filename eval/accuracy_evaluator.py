@@ -37,6 +37,7 @@ from transformers import RobertaModel, RobertaTokenizer
 from app_migrator_analysis import MigrationSummarizer
 from logger_config import setup_logger
 from utils import parse_json_with_retries, preprocess_code  # type: ignore
+from pathlib import Path
 
 logger = setup_logger(__name__)
 
@@ -303,5 +304,5 @@ class AccuracyEvaluator:
 
 if __name__ == "__main__":
     eval = AccuracyEvaluator("api_key")
-    result = asyncio.run(eval.evaluate_accuracy("test_dataset.json"))
+    result = asyncio.run(eval.evaluate_accuracy(Path(__file__).parent / "test_dataset.json"))
     print("Accuracy: {}%".format(result * 100))
