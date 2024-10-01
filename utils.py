@@ -19,6 +19,7 @@ from pathlib import Path
 from logger_config import setup_logger
 import json
 import re
+import javalang
 
 logger = setup_logger(__name__)
 
@@ -110,6 +111,7 @@ async def parse_json_with_retries(llm, original_prompt: str, response: str, retr
 
     for i in range(retries):
         response_text = response.strip()
+        error = ''
 
         if response_text == '':
             logger.info("No changes detected for item: %s", identifier)
@@ -145,7 +147,7 @@ async def parse_json_with_retries(llm, original_prompt: str, response: str, retr
     return {}
 
 
-def preprocess_code(code):
+def preprocess_code(code: str) -> str:
     # Function to preprocess the code
     
     # Step 1: Unescape the escaped characters
@@ -175,3 +177,58 @@ def preprocess_code(code):
             indent_level += 1
 
     return '\n'.join(indented_code)
+
+def is_dao_class(file_path: str, file_content: str) -> bool:
+    """
+    Analyzes the given Java file content and its path to determine if it represents a DAO class.
+
+    Args:
+        file_path (str): The path to the Java file.
+        file_content (str): The content of the Java file.
+
+    Returns:
+        bool: True if the file likely represents a DAO class, False otherwise.
+    """
+
+    dao_keywords = ["Dao", "Repository", "Persistence", "Mapper"]
+    dao_annotations = ["@Repository", "@Service", "@Component", "@Mapper"]
+    dao_libraries = ["javax.persistence", "org.springframework.data", "org.hibernate"]
+    jdbc_keywords = ["Connection", "Statement", "PreparedStatement", "ResultSet", "DriverManager"]
+
+    if not file_path.endswith(".java"):
+        return False
+    
+    try:
+        # Check if the file path contains "dao" directory (case-insensitive)
+        if "dao" in file_path.lower():
+            logger.info(f"Found 'dao' in file path: {file_path}")
+            return True
+
+        tree = javalang.parse.parse(file_content)
+        for path, class_declaration in tree.filter(javalang.tree.ClassDeclaration):
+            
+            # Check class name, annotations, and superclasses
+            if (any(keyword.lower() in class_declaration.name.lower() for keyword in dao_keywords) or
+                any(annotation.name.lower() in dao_annotations for annotation in class_declaration.annotations) or
+                (class_declaration.extends is not None and any(keyword.lower() in str(base).lower() for base in class_declaration.extends for keyword in dao_keywords))):
+                return True
+
+            # Check for database-related method calls
+            for method in class_declaration.methods:
+                for path, node in method.filter(javalang.tree.MethodInvocation):
+                    if node.qualifier is not None and any(library in node.qualifier for library in dao_libraries):
+                        return True
+
+                for path, node in method.filter(javalang.tree.MemberReference):
+                    if any(jdbc_keyword in node.member for jdbc_keyword in jdbc_keywords):
+                        return True
+
+                if method.throws is not None:
+                    for exc in method.throws:
+                        if "SQLException" in exc:
+                            return True
+
+    except Exception as e:
+        print(f"Error parsing {file_path}: {e}")
+
+    return False

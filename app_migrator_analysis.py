@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils import list_files, replace_and_save_html, parse_json_with_retries # type: ignore
+from utils import list_files, replace_and_save_html, parse_json_with_retries, is_dao_class # type: ignore
 import os
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 import dataclasses
@@ -127,15 +127,22 @@ class MigrationSummarizer:
         questions = content['questions']
 
         concept_search_results = []
+        answers_present = False
+        
         for question in questions:
             relevant_records = self._context_example_db.search(question, 0.25, 2)
             concept_search_results.append(relevant_records.values())
+
+            if (len(relevant_records.values) > 0):
+                answers_present = True
 
         question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(questions, concept_search_results)
 
         logger.info("Question with Answer Prompt: %s", question_with_answer_prompt)
         
-        final_prompt = original_prompt + "\n" + question_with_answer_prompt
+        final_prompt = original_prompt
+        if answers_present:
+            final_prompt = original_prompt + "\n" + question_with_answer_prompt
         
         content = await self._llm.ainvoke(final_prompt)
         content = await parse_json_with_retries(self._llm, prompt, content, 2, identifier)
@@ -166,7 +173,7 @@ class MigrationSummarizer:
 
         return formatted_string
 
-    async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
+    async def analyze_file(self, filepath: str, file_content: Optional[str] = None, method_changes: str = None, old_schema: str = None, new_schema: str = None) -> Tuple[List[FileAnalysis], List[MethodSignatureChange]]:
         """
         Analyzes a given file to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
@@ -193,204 +200,18 @@ class MigrationSummarizer:
             line_count=file_content.count('\n'),
         )
 
-        examples_prompt = ""
-        relevant_records = self._code_example_db.search(file_content)
-        if relevant_records:
-            example_prompt = dedent(
-                    """
-                    Code like the following
-                    ```
-                    {example}
-                    ```
+        if is_dao_class(filepath, file_content):
+            prompt = self.get_prompt_for_dao_class(file_content, filepath, method_changes, old_schema, new_schema)
+            response = await self.migration_code_conversion_invoke(prompt, file_content, old_schema, new_schema, "analyze-dao-class- " + filepath)
+        else:
+            prompt = self.get_prompt_for_non_dao_class(file_content, filepath, method_changes)
+            response = await self._llm_flash.ainvoke(prompt)
+            response = await parse_json_with_retries(self._llm_flash, prompt, response, 3, filepath)
 
-                    can be rewritten as follows:
-
-                    ```
-                    {rewrite}
-                    ```
-                    """)
-            examples = [
-                example_prompt.format(**record)
-                for record in relevant_records
-            ]
-            examples_prompt_template = dedent("""
-            The following are examples of how to rewrite code for Spanner.
-
-            {examples}
-            """)
-            examples_prompt = examples_prompt_template.format(examples=examples)
-
-        prompt = f"""
-            You are a Cloud Spanner expert. You are working on migrating an application
-            from MySQL JDBC to Spanner JDBC and not Java Client library. Review the following file and identify
-            how it will need to be modified to work with Cloud Spanner. The code provided contains blank lines, comments, documentation, and other non-executable elements.
-            You can refer function docs and comments to understand more about it and then suggest the chagnes.
-
-            Return your results in JSON dictionary format.  The JSON output should have three top-level keys:
-
-            *   `file_modifications`: Contains a list of dictionaries, each detailing a code modification required for Cloud Spanner compatibility. Follow the format outlined below for each modification.
-            *   `method_signature_changes`: Contains a list of dictionaries, each detailing a public method signature changes required for caller. This includes the original and modified signature, along with any relevant explanations. No need to include changes if it's just a change in parameters name.
-            *   `general_warnings`: Contains a list of general warnings or considerations related to the migration, even if they don't require direct code changes.
-
-            Make sure changes in `file_modifications` and `method_signature_changes` are consistent with each other.
-
-            Ensure that line numbers in the file_modifications are accurate and correspond to the line numbers in the original code file, including comments,
-            blank lines, and other non-executable elements.
-
-            **Format for `file_modifications`:**
-
-            ```json
-            [
-            {{
-                "code_sample": "<piece of code to update>",
-                "start_line": <starting line number of the affected code w.r.t complete code contains non executable section>,
-                "end_line": <ending line number of the affected code w.r.t complete code contains non executable section>,
-                "suggested_change": "<example modification to the file>",
-                "description": "<human-readable description of the required change>",
-                "complexity": "<Complexity(eg: SIMPLE|MODERATE|COMPLEX)>",
-                "warnings": [
-                "<thing to be aware of>",
-                "<another thing to be aware of>",
-                ...
-                ]
-            }},
-            ...
-            ]
-            ```
-
-            **Format for `method_signature_changes`:**
-            ```json
-            [
-            {{
-                "original_signature": "<original method signature>",
-                "new_signature": "<modified method signature>",
-                "explanation": "<description of why the change is needed and how to update the code>",
-            }},
-            ...
-            ]
-            ```
-
-            {examples_prompt}
-
-            **Instructions:**
-            1. All generated results values should be single-line strings. Please only suggest relevant changes and don't hallucinate.
-            2. If the code contains any known Spanner anti-patterns, describe the problem and any known workarounds under "warnings".
-            3. Feel free to write code in applicaiton layer if some functioanlity can't be supported in database layer.
-            4. Make sure return JSON is correct, verify it so we don't get error parsing it.
-            5. Strictly capture the larger code snippet to modify and provide their changes in one object and provide a cummilative desciption of change instead of providing it line by line.
-            6. You need to migrte to Spanner JDBC and not Spanner Client Library.
-            7. Consider the following factors when evaluating complexity: difficulty of implementation, level of technical expertise required, and the clarity of the requirements. 
-                Classify the complexity as SIMPLE, MODERATE, COMPLEX
-
-
-            *****Older Schema****
-            `````````````
-            CREATE TABLE Account (
-            AccountId INT NOT NULL AUTO_INCREMENT,
-            CreationTimestamp DATETIME(6) NOT NULL DEFAULT NOW(6),
-            AccountStatus INT NOT NULL,
-            Balance NUMERIC(18,2) NOT NULL,
-            PRIMARY KEY (AccountId)
-            );
-
-            CREATE TABLE TransactionHistory (
-            EventId BIGINT NOT NULL AUTO_INCREMENT,
-            AccountId INT NOT NULL,
-            EventTimestamp DATETIME(6) NOT NULL DEFAULT NOW(6),
-            IsCredit BOOL NOT NULL,
-            Amount NUMERIC(18,2) NOT NULL,
-            Description TEXT,
-            PRIMARY KEY (EventId)
-            );
-
-            CREATE TABLE Customer (
-            CustomerId INT NOT NULL AUTO_INCREMENT,
-            Name TEXT NOT NULL,
-            Address TEXT NOT NULL,
-            PRIMARY KEY (CustomerId)
-            );
-
-            CREATE TABLE CustomerRole (
-            CustomerId INT NOT NULL,
-            RoleId INT NOT NULL AUTO_INCREMENT,
-            Role TEXT NOT NULL,
-            AccountId INT NOT NULL,
-            CONSTRAINT FK_AccountCustomerRole FOREIGN KEY (AccountId)
-                REFERENCES Account(AccountId),
-            PRIMARY KEY (CustomerId, RoleId),
-            KEY (RoleId)
-            );
-
-            CREATE INDEX CustomerRoleByAccount ON CustomerRole(AccountId, CustomerId);
-
-            CREATE TABLE SampleApp (
-            Id BIGINT NOT NULL AUTO_INCREMENT,
-            PRIMARY KEY (Id)
-            );
-
-            `````````````
-
-            *****New Schema with Spanner****
-            `````````````
-            CREATE TABLE Account (
-            AccountId BYTES(16) NOT NULL,
-            CreationTimestamp TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
-            AccountStatus INT64 NOT NULL,
-            Balance NUMERIC NOT NULL
-            ) PRIMARY KEY (AccountId);
-
-            CREATE TABLE TransactionHistory (
-            AccountId BYTES(16) NOT NULL,
-            EventTimestamp TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
-            IsCredit BOOL NOT NULL,
-            Amount NUMERIC NOT NULL,
-            Description STRING(MAX)
-            ) PRIMARY KEY (AccountId, EventTimestamp DESC),
-            INTERLEAVE IN PARENT Account ON DELETE CASCADE;
-
-            CREATE TABLE Customer (
-            CustomerId BYTES(16) NOT NULL,
-            Name STRING(MAX) NOT NULL,
-            Address STRING(MAX) NOT NULL,
-            ) PRIMARY KEY (CustomerId);
-
-            CREATE TABLE CustomerRole (
-            CustomerId BYTES(16) NOT NULL,
-            RoleId BYTES(16) NOT NULL,
-            Role STRING(MAX) NOT NULL,
-            AccountId BYTES(16) NOT NULL,
-            CONSTRAINT FK_AccountCustomerRole FOREIGN KEY (AccountId)
-                REFERENCES Account(AccountId),
-            ) PRIMARY KEY (CustomerId, RoleId),
-            INTERLEAVE IN PARENT Customer ON DELETE CASCADE;
-
-            CREATE INDEX CustomerRoleByAccount ON CustomerRole(AccountId, CustomerId);
-
-            CREATE TABLE CloudSpannerSampleApp (
-            Id INT64 NOT NULL
-            ) PRIMARY KEY (Id)
-
-            `````````````
-
-            Please analyze the following file:
-            `{filepath}`
-            ```
-            {file_content}
-            ```
-
-            The above source file is dependent on some files which also has following changes in the public method signature:
-            ```
-            {method_changes}
-            ```
-            Please also consdier how the method changes in dependent files will impact the changes in this file.
-            """
-
-        response = await self._llm.ainvoke(prompt)
-
-        response_parsed = await self.json_multishot(prompt, response, 3, filepath)
-
-        if isinstance(response_parsed, dict):
-            response_parsed = [response_parsed]
+        if isinstance(response, dict):
+            response_parsed = [response]
+        else:
+            response_parsed = []
 
         file_analysis = []
         method_signatures = []
@@ -422,75 +243,200 @@ class MigrationSummarizer:
                 ))
 
         return file_analysis, method_signatures, file_metadata
+    
 
-    async def json_multishot(self, original_prompt: str, response: str, retries: int = 3, identifier = ''):
-        """
-        Attempts to correct and parse JSON responses from the language model multiple times if errors occur.
+    def get_prompt_for_non_dao_class(self, file_content: str, filepath: str, method_changes:str) -> str:
+        prompt = f"""
+            You are tasked with adapting a Java class to function correctly within an application that has migrated its persistence layer to Cloud Spanner.
 
-        Args:
-            original_prompt (str): The original prompt sent to the language model.
-            response (str): The initial response from the language model.
-            retries (int): The number of retries for parsing the JSON response.
+            **Objective:**
+            Analyze the provided Java code (which may be a controller, service, utility class, POJO, or any other non-DAO component) and identify the necessary modifications to ensure compatibility with the updated application architecture. The code may include comments, blank lines, and other non-executable elements. Use function documentation and comments to understand the code's purpose and its role within the application.
 
-        Returns:
-            Dict: A parsed JSON object
-        """
-        prompt_template = """
-            The following generated JSON value failed to parse, it contained the following
-            error. Please return corrected string as a valid JSON in the dictionary format. All strings should be
-            single-line strings.
+            **Output:**
+            Return your analysis in JSON format with the following keys:
 
-            The original prompt was:
-            {}
+            *   **`file_modifications`**: A list of required code changes.
+            *   **`method_signature_changes`**: A list of required public method signature changes for callers (excluding parameter name changes).
+            *   **`general_warnings`**: A list of general warnings or considerations for adapting to the updated application architecture.
 
-            And the generated JSON is:
+            **Format for `file_modifications`:**
 
             ```json
-            {}
+            [
+            {{
+                "code_sample": "<piece of code to update>",
+                "start_line": <starting line number of the affected code>,
+                "end_line": <ending line number of the affected code>,
+                "suggested_change": "<example modification to the file>",
+                "description": "<human-readable description of the required change>",
+                "complexity": "<SIMPLE|MODERATE|COMPLEX>",
+                "warnings": [
+                "<thing to be aware of>",
+                "<another thing to be aware of>",
+                ...
+                ]
+            }},
+            ...
+            ]
             ```
 
-            Error: `{}`
+            **Format for `method_signature_changes`:**
+            ```json
+            [
+            {{
+                "original_signature": "<original method signature>",
+                "new_signature": "<modified method signature>",
+                "explanation": "<description of why the change is needed and how to update the code>"
+            }},
+            ...
+            ]
+            ```
+
+            **Instructions:**
+            1. Line numbers in file_modifications must be accurate and include all lines in the original code.
+            2. All generated result values should be single-line strings. Avoid hallucinations and suggest only relevant changes.
+            3. Consider the class's role within the application.
+                    a. If it interacts with a service layer, identify any calls to service methods that have changed due to the underlying DAO updates and suggest appropriate modifications.
+                    b. If it's a POJO, analyze if any changes in data types or structures are required due to the Spanner migration.
+                    c. If it's a utility class, determine if any of its functionalities are affected by the new persistence layer.
+            4. Consider potential impacts on business logic or data flow due to changes in the underlying architecture.
+            5. Ensure the returned JSON is valid and parsable.
+            6. Capture larger code snippets for modification and provide cumulative descriptions instead of line-by-line changes.
+            7. Classify complexity as SIMPLE, MODERATE, or COMPLEX based on implementation difficulty, required expertise, and clarity of requirements.
+
+            **INPUT**
+            Please analyze the following file:
+            `{filepath}`
+
+            ```
+            {file_content}
+            ```
+
+            **Dependent File Method Changes:**
+            Consider the impact of method changes in dependent files on the DAO code being analyzed.
+            ```
+            {method_changes}
+            ```
+        """
+
+        return prompt
+    
+    def get_prompt_for_dao_class(self, file_content: str, filepath: str, method_changes:str, old_schema: str, new_schema:str) -> str:
+        examples_prompt = ""
+        relevant_records = self._code_example_db.search(file_content)
+        
+        if relevant_records:
+            example_prompt = dedent(
+                    """
+                    Code like the following
+                    ```
+                    {example}
+                    ```
+
+                    can be rewritten as follows:
+
+                    ```
+                    {rewrite}
+                    ```
+                    """)
+            examples = [
+                example_prompt.format(**record)
+                for record in relevant_records
+            ]
+            examples_prompt_template = dedent("""
+            The following are examples of how to rewrite code for Spanner.
+
+            {examples}
+            """)
+            examples_prompt = examples_prompt_template.format(examples=examples)
+
+        prompt = f"""
+            You are a Cloud Spanner expert tasked with migrating a DAO class from MySQL JDBC to Spanner JDBC. 
+
+            **Objective:**
+            Analyze the provided Java DAO code and identify the necessary modifications for compatibility with Cloud Spanner. The code may include comments, blank lines, and other non-executable elements. Use function documentation and comments to understand the code's purpose, particularly how it interacts with the database.
+
+            **Output:**
+            Return your analysis in JSON format with the following keys:
+
+            *   **`file_modifications`**: A list of required code changes.
+            *   **`method_signature_changes`**: A list of required public method signature changes for callers (excluding parameter name changes).
+            *   **`general_warnings`**: A list of general warnings or considerations for the migration, especially regarding Spanner-specific limitations and best practices.
+
+            **Format for `file_modifications`:**
+
+            ```json
+            [
+            {{
+                "code_sample": "<piece of code to update>",
+                "start_line": <starting line number of the affected code>,
+                "end_line": <ending line number of the affected code>,
+                "suggested_change": "<example modification to the file>",
+                "description": "<human-readable description of the required change>",
+                "complexity": "<SIMPLE|MODERATE|COMPLEX>",
+                "warnings": [
+                "<thing to be aware of>",
+                "<another thing to be aware of>",
+                ...
+                ]
+            }},
+            ...
+            ]
+            ```          
+
+            **Format for `method_signature_changes`:**
+            ```json
+            [
+            {{
+                "original_signature": "<original method signature>",
+                "new_signature": "<modified method signature>",
+                "explanation": "<description of why the change is needed and how to update the code>"
+            }},
+            ...
+            ]
+            ```
+
+            {examples_prompt}
+
+            **Instructions:**
+            1. Ensure consistency between file_modifications and method_signature_changes.
+            2. Line numbers in file_modifications must be accurate and include all lines in the original code.
+            3. All generated result values should be single-line strings. Avoid hallucinations and suggest only relevant changes.
+            4. Pay close attention to SQL queries within the DAO code. Identify any queries that are incompatible with Spanner and suggest appropriate modifications.
+            5. Describe any Spanner anti-patterns found in the code and suggest workarounds under "warnings". For example, highlight potential issues with large IN clauses or the use of unsupported data types.
+            6. If some functionality cannot be supported directly in Spanner, suggest workarounds in the application layer.
+            7. Ensure the returned JSON is valid and parsable.
+            8. Capture larger code snippets for modification and provide cumulative descriptions instead of line-by-line changes.
+            9. Migrate to Spanner JDBC, not the Spanner Client Library.
+            10. Classify complexity as SIMPLE, MODERATE, or COMPLEX based on implementation difficulty, required expertise, and clarity of requirements.
+
+            **INPUT**
+            **Older MySQL Schema**
+            ```
+            {old_schema}
+            `````````````
+            **New Spanner Schema**
+            ```
+            {new_schema}
+            ```
+
+            Please analyze the following file:
+            `{filepath}`
+
+            ```
+            {file_content}
+            ```
+
+            **Dependent File Method Changes:**
+            Consider the impact of method changes in dependent files on the DAO code being analyzed.
+            ```
+            {method_changes}
+            ```
             """
+        
+        return prompt;
 
-        for i in range(retries):
-            response_text = response.strip()
-
-            if response_text == '':
-                logger.info("No changes detected for item: %s", identifier)
-                return {}  # Return an empty dictionary to indicate no changes
-
-            if response_text.startswith('```json\n') and response_text.endswith('\n```'):
-                response_text = response_text[8:-4]
-                if response_text == '':
-                    logger.info("No changes detected within JSON block for item: %s", identifier)
-                    return {}
-
-            try:
-                result = json.loads(response_text)
-                if isinstance(result, dict):
-                    logger.debug("Successfully parsed JSON for item: %s", identifier)
-                    return result
-                else:
-                    error = "The output is not in the desired format, top-level object is not a dictionary"
-            except json.decoder.JSONDecodeError as e:
-                error = str(e)
-
-            logger.warning("JSON parsing error for item %s (attempt %d/%d): %s", identifier, i + 1, retries, error)
-            print(f"Attempting to correct JSON parsing error for item {identifier} (attempt {i + 1}/{retries})")  # Print statement for visibility
-
-            response = await self._llm.ainvoke(prompt_template.format(original_prompt, response_text, error))
-
-        if response == '':
-            logger.info("No changes detected after retries for item: %s", identifier)
-            return {}
-
-        logger.warning("Failed to parse JSON after retries for item: %s %s", identifier, response)
-        logger.error("Failed to parse JSON after retries for item: %s ", identifier)
-        print(f"Failed to parse JSON after retries for item {identifier}. Check the logs for details.")  # Print statement for critical failure
-
-        return {}
-
-    async def analyze_project(self, directory: str, max_threads = 2, batch_size=100) -> List[List[FileAnalysis]]:
+    async def analyze_project(self, directory: str, old_schema_file: str = "", new_schema_file: str = "", max_threads = 2, batch_size=100) -> List[List[FileAnalysis]]:
         """
         Analyzes all files in a given project directory to determine necessary modifications for migrating from MySQL JDBC to Cloud Spanner JDBC.
 
@@ -528,6 +474,21 @@ class MigrationSummarizer:
         logger.info("Total number of dependency groups: %s", len(list_of_lists))
         logger.info("Dependency group sizes: %s", [len(x) for x in list_of_lists])
 
+        old_schema = ""
+        new_schema = ""
+
+        try:
+            with open(old_schema_file, "r") as f:
+                old_schema = f.read()
+        except FileNotFoundError:
+            print(f"Warning: Old schema file not found: {old_schema_file}")
+
+        try:
+            with open(new_schema_file, "r") as f:
+                new_schema = f.read()
+        except FileNotFoundError:
+            print(f"Warning: New schema file not found: {new_schema_file}")
+
         async def process_dependency(node):
             """
             Analyzes a file node, taking into account its dependencies.
@@ -552,7 +513,7 @@ class MigrationSummarizer:
             change_dicts = [change.__dict__ for change in result]
             json_string = json.dumps(change_dicts, indent=2)
 
-            file_analysis, methods_changes, file_metadata = await self.analyze_file(filepath=node, method_changes=json_string)
+            file_analysis, methods_changes, file_metadata = await self.analyze_file(node, json_string, old_schema, new_schema)
 
             dp[node] = methods_changes
 
@@ -735,7 +696,7 @@ class MigrationSummarizer:
             logger.info("Processing Task: %s", task['category'])
             prompt = prompt_template.format(category=task['category'], code_changes=task['code_changes'])
             response = await self._llm.ainvoke(prompt)
-            response = await self.json_multishot(prompt, response, 4, 'summarize_report_task_' + task['category'])
+            response = await parse_json_with_retries(self._llm, prompt, response, 4, 'summarize_report_task_' + task['category'])
             logger.info("Task processing completed")
             return response 
 
@@ -813,7 +774,7 @@ class MigrationSummarizer:
             """
 
         response = await self._llm.ainvoke(prompt)
-        response = await self.json_multishot(prompt, response, 2, 'summarize_report_overview')
+        response = await parse_json_with_retries(self._llm, prompt, response, 2, 'summarize_report_overview')
 
         return response
     
@@ -905,7 +866,7 @@ class MigrationSummarizer:
 
         prompt = prompt_template.format(summaries_dictionary=summaries_dictionary, records=len(summaries_dictionary))
         response = await self._llm.ainvoke(prompt)
-        response = await self.json_multishot(prompt, response, 4, 'summarize_report_tasks')
+        response = await parse_json_with_retries(self._llm, prompt, response, 4, 'summarize_report_tasks')
 
         # Define a custom sort order for effort
         effort_order = {'Major': 1, 'Moderate': 2, 'Minor': 3}
