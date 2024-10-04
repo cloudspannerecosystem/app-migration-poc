@@ -23,16 +23,19 @@ from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 vertexai.init()
 
+import pathlib
+BASE_DIR = pathlib.Path(__file__).parent
+
 
 class ExampleDb:
 
     @classmethod
     def CodeExampleDb(cls):
-        return cls(examples_file="code_examples_embedded.json")
+        return cls(examples_file=(BASE_DIR/"code_examples_embedded.json").resolve())
 
     @classmethod
     def ConceptExampleDb(cls):
-        return cls(examples_file="concept_examples_embedded.json")
+        return cls(examples_file=(BASE_DIR/"concept_examples_embedded.json").resolve())
 
     def __init__(self, examples_file: str):
         self._examples_file = examples_file
