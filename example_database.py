@@ -66,55 +66,55 @@ class ExampleDb:
             np.array(embedding.values, dtype=np.float32) for embedding in embeddings
         ]
 
-  def search(self,
-             search_terms: str|List[str],
-             distance: float = 0.25,
-             top_k: int = 10
-             ) -> Dict[int, float|str]:
-    if not search_terms:
-      # If no input, shirt-circuit and return no output.
-      # (The code below assumes at least one input term to search for.)
-      return {}
+    def search(self,
+               search_terms: str|List[str],
+               distance: float = 0.25,
+               top_k: int = 10
+              ) -> Dict[int, float|str]:
+      if not search_terms:
+        # If no input, shirt-circuit and return no output.
+        # (The code below assumes at least one input term to search for.)
+        return {}
 
-    target_similarity = 1 - distance
+      target_similarity = 1 - distance
 
-        if isinstance(search_terms, str):
-            # Heuristic for breaking up big string blocks
-            search_terms = [x for x in search_terms.split("\n\n") if x.strip()]
+      if isinstance(search_terms, str):
+          # Heuristic for breaking up big string blocks
+          search_terms = [x for x in search_terms.split("\n\n") if x.strip()]
 
-        search_embeddings = self._embed_search_terms(search_terms)
+      search_embeddings = self._embed_search_terms(search_terms)
 
-        results_filtered_list = []
-        for record in self._data.values():
-            example_embedding = record["example_embedding"]
-            similarity = max(
-                [
-                    float(
-                        cosine_similarity([search_embedding], [example_embedding])[0, 0]
-                    )
-                    for search_embedding in search_embeddings
-                ]
-            )
-            if similarity >= target_similarity:
-                results_filtered_list.append((similarity, record["id"]))
+      results_filtered_list = []
+      for record in self._data.values():
+          example_embedding = record["example_embedding"]
+          similarity = max(
+              [
+                  float(
+                      cosine_similarity([search_embedding], [example_embedding])[0, 0]
+                  )
+                  for search_embedding in search_embeddings
+              ]
+          )
+          if similarity >= target_similarity:
+              results_filtered_list.append((similarity, record["id"]))
 
-        results_topk = sorted(results_filtered_list, reverse=True)[:top_k]
+      results_topk = sorted(results_filtered_list, reverse=True)[:top_k]
 
-        results = OrderedDict(
-            [
-                (
-                    id_,
-                    {
-                        "distance": 1 - similarity,
-                        "example": self._data[id_]["example"],
-                        "rewrite": self._data[id_]["rewrite"],
-                    },
-                )
-                for similarity, id_ in results_topk
-            ]
-        )
+      results = OrderedDict(
+          [
+              (
+                  id_,
+                  {
+                      "distance": 1 - similarity,
+                      "example": self._data[id_]["example"],
+                      "rewrite": self._data[id_]["rewrite"],
+                  },
+              )
+              for similarity, id_ in results_topk
+          ]
+      )
 
-        return results
+      return results
 
 
 if __name__ == "__main__":

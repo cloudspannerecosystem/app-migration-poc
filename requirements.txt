@@ -12,7 +12,7 @@ langchain_google_vertexai
 scikit-learn
 torch
 transformers
-sklearn
+scikit-learn
 javalang
 black
 isort

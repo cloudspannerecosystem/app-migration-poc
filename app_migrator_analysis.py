@@ -159,7 +159,7 @@ class MigrationSummarizer:
             relevant_records = self._context_example_db.search(question, 0.25, 2)
             concept_search_results.append(relevant_records.values())
 
-            if len(relevant_records.values) > 0:
+            if relevant_records:
                 answers_present = True
 
         question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
@@ -1002,14 +1002,9 @@ class MigrationSummarizer:
         affected_files = set(response.get('codeImpact', set()))
 
         file_analyses = defaultdict(lambda: defaultdict(list))
-        for analysis in summaries:
-            #for analysis in file_data:
-            if analysis.filename in affected_files:
-                file_analyses[analysis.filename][analysis.complexity].append(analysis)
-
-        for task in response['tasks']:
-            task['affectedFiles'] = [x for x in task['affectedFiles']
-                                     if x in affected_files]
+        for analysis in summaries_dictionary:
+            if analysis['filename'] in affected_files:
+                file_analyses[analysis['filename']][analysis['complexity']].append(analysis)
 
         # Define a custom sort order for effort
         effort_order = {"Major": 1, "Moderate": 2, "Minor": 3}
