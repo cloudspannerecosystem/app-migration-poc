@@ -114,7 +114,7 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 
 <section>
 <h2>Code Impact</h2>
-Out of {{ app_data.files|length }} files, only the following {{ report_data.codeImpact|length }}
+Out of {{ app_data.files|length }} files, only the following {{ affected_files|length }}
 are impacted by the migration to Spanner:
 
 <div>
@@ -206,9 +206,9 @@ are impacted by the migration to Spanner:
   const labels = {{ file_analyses.keys()|list|tojson }};
   const shortlabels = labels.map((x) => x.split("/").pop());
 
-  const complex_changes_counts = [{% for file in file_analyses.values() %}{{ file.COMPLEX|length}}, {% endfor %}];
-  const moderate_changes_counts = [{% for file in file_analyses.values() %}{{ file.MODERATE|length}}, {% endfor %}];
-  const simple_changes_counts = [{% for file in file_analyses.values() %}{{ file.SIMPLE|length}}, {% endfor %}];
+  const complex_changes_counts = [{% for filename, file in file_analyses.items() %}{{ file.COMPLEX|length}}, {% endfor %}];
+  const moderate_changes_counts = [{% for filename, file in file_analyses.items() %}{{ file.MODERATE|length}}, {% endfor %}];
+  const simple_changes_counts = [{% for filename, file in file_analyses.items() %}{{ file.SIMPLE|length}}, {% endfor %}];
 
   new Chart(ctx, {
     type: 'bar',
