@@ -13,5 +13,15 @@
     "id": 3,
     "example": "int recordId",
     "rewrite": "int recordId /* Spanner natively supports integer IDs */"
+  },
+  {
+    "id": 4,
+    "example": "#include <grpcpp/grpcpp.h>",
+    "rewrite": "#include <grpcpp/grpcpp.h> /* gRPC usage is usually not Spanner-related, it does not need to be translated to support other databases. */"
+  },
+  {
+    "id": 5,
+    "example": "SELECT LAST_INSERT_ID()",
+    "rewrite": "INSERT <...> RETURNING <table_id_column> /* Use a sequence with CREATE SEQUENCE for IDs.  Spanner no longer requires UUID-based PKs.  PKs and IDs can be of type INT. */"
   }
 ]
