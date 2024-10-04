@@ -1,0 +1,74 @@
+name: Eval Tests
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
+jobs:
+  benchmark:
+    name: Performance regression check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Fetch Google credentials
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_GEMINI_KEY }}'
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The examples database shouldn't change super often.
+      # Cache it between runs so that we don't have to re-compute any embeddings
+      # that we already computed previously.
+      # Key the cache on the hash of the examples database so that
+      # we always regenerate embeddings from scratch on any change --
+      # this is probably unnecessary because the embedding tool knows how to
+      # diff the database against the existing embeddings, and it may become
+      # expensive if the examples database becomes large, but it's a
+      # conservative approach for now while the DB is small.
+      - name: Cache previous examples files
+        uses: actions/cache@v4
+        with:
+          path: |
+            code_examples_embedded.json
+            concept_examples_embedded.json
+          key: examples-embedded-${{ hashFiles('*_examples.json') }}
+      - name:  Generate example files if needed
+        run: python embed_examples.py
+
+      - name: Run benchmark
+        run: python eval/accuracy_evaluator.py --github-benchmark-data-file=output.json
+
+      - name: Evaluate and store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'customBiggerIsBetter'
+          # Where the output from the benchmark tool is stored
+          output-file-path: output.json
+          # GitHub API token to make a commit comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Enable alert commit comment
+          comment-on-alert: true
+          # Enable Job Summary for PRs
+          summary-always: true
+          # How much run-to-run change is needed to trigger an alert
+          alert-threshold: "200%"
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          auto-push: true

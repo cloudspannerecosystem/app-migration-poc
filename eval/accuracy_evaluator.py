@@ -58,7 +58,7 @@ class CodeDescriptionEvaluator:
     def get_code_embedding(self, code_snippet):
         """Generate embeddings for code snippets."""
         inputs = self.code_tokenizer(
-            code_snippet, return_tensors="pt", truncation=True, padding=True
+            code_snippet, return_tensors="pt", truncation=True, max_length=64, padding=True
         )
         with torch.no_grad():
             outputs = self.code_model(**inputs)
@@ -68,7 +68,7 @@ class CodeDescriptionEvaluator:
     def get_desc_embedding(self, description):
         """Generate embeddings for descriptions."""
         inputs = self.desc_tokenizer(
-            description, return_tensors="pt", truncation=True, padding=True
+            description, return_tensors="pt", truncation=True, max_length=64, padding=True
         )
         with torch.no_grad():
             outputs = self.desc_model(**inputs)
