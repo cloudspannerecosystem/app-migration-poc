@@ -66,12 +66,12 @@ class MethodSignatureChange:
 
 def fileToDataUrl(filename: str, mimetype: str = None) -> str:
     if not mimetype:
-        mimetype = mimetypes.guess_type(filename)
+        mimetype, _encoding = mimetypes.guess_type(filename)
     if not isinstance(mimetype, str):
-        raise IOError(f"Unknow MIME type for {filename}: {mimetype}")
+        raise IOError(f"Unknown MIME type for {filename}: {mimetype}")
 
     with open(filename, "rb") as f:
-        filedata = base64.b64encode(f.read())
+        filedata = base64.b64encode(f.read()).decode('ascii')
         return f"data:{mimetype};base64,{filedata}"
 
 class MigrationSummarizer:
@@ -403,11 +403,12 @@ class MigrationSummarizer:
                     ```
                     {rewrite}
                     ```
-                    """
-            )
-            examples = [example_prompt.format(**record) for record in relevant_records]
-            examples_prompt_template = dedent(
-                """
+                    """)
+            examples = [
+                example_prompt.format(**record)
+                for record in relevant_records.values()
+            ]
+            examples_prompt_template = dedent("""
             The following are examples of how to rewrite code for Spanner.
 
             {examples}
@@ -997,6 +998,18 @@ class MigrationSummarizer:
         response = await parse_json_with_retries(
             self._llm, prompt, response, 4, "summarize_report_tasks"
         )
+
+        affected_files = set(response.get('codeImpact', set()))
+
+        file_analyses = defaultdict(lambda: defaultdict(list))
+        for analysis in summaries:
+            #for analysis in file_data:
+            if analysis.filename in affected_files:
+                file_analyses[analysis.filename][analysis.complexity].append(analysis)
+
+        for task in response['tasks']:
+            task['affectedFiles'] = [x for x in task['affectedFiles']
+                                     if x in affected_files]
 
         # Define a custom sort order for effort
         effort_order = {"Major": 1, "Moderate": 2, "Minor": 3}
