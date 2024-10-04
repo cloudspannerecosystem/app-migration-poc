@@ -13,9 +13,13 @@
 # limitations under the License.
 import sys
 import os
+import pathlib
 #ToDo:Create a module
+# Assume all files are relative to this script's *containing* dir
+os.chdir(pathlib.Path(__file__).parent.resolve())
+# Set PYTHONPATH to include the *parent* of our containing dir
 sys.path.append(
-    os.path.abspath("/usr/local/google/home/gauravpurohit/ai/app-migration-poc/")
+    os.path.abspath(pathlib.Path(__file__).parent.parent.resolve())
 )
 import asyncio
 import json
@@ -157,7 +161,7 @@ class AccuracyEvaluator:
             1. **Understand Context:** Analyze the `mysql_schema` and `source_code` to see how the code interacts with the MySQL schema.
             2. **Understand New Schema:**  Examine the `spanner_schema` and understand how the `mysql_schema` has been transformed.
             3. **Code Changes:**  Use your Spanner knowledge, the schema changes, and the application context to convert the `source_code` to work with Spanner JDBC.
-            
+
             **Important Considerations:**
             Modify the code to work with Cloud Spanner using JDBC. If a direct equivalent is not available, implement the logic in the application layer.
 
@@ -165,7 +169,7 @@ class AccuracyEvaluator:
             ```json
             {{
                 "converted_code": "The migrated code snippet (single-line string)",
-                "description": "Explanation for the changes (single-line string)" 
+                "description": "Explanation for the changes (single-line string)"
             }}
             ```
             """
