@@ -1,0 +1,67 @@
+name: Eval Tests
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
+jobs:
+  benchmark:
+    name: Performance regression check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_GEMINI_KEY }}'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Cache previous examples files
+        uses: actions/cache@v4
+        with:
+          path: |
+            code_examples_embedded.json
+            concept_examples_embedded.json
+          key: examples-embedded-${{ hashFiles('*_examples.json') }}
+      - name:  Generate example files if needed
+        run: python embed_examples.py
+      - name: Run benchmark
+        run: python eval/accuracy_evaluator.py --github-benchmark-data-file=output.json
+      # Download previous benchmark result from cache (if exists)
+      #- name: Download previous benchmark data
+      #  uses: actions/cache@v4
+      #  with:
+      #    path: ./cache
+          # TODO: Use 'key' to differentiate between different variants,
+          # if we have different variants in the future
+      #    key: all-benchmarks
+      # Run `github-action-benchmark` action
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'customBiggerIsBetter'
+          # Where the output from the benchmark tool is stored
+          output-file-path: output.json
+          # Where the previous data file is stored
+          #external-data-json-path: ./cache/benchmark-data.json
+          # GitHub API token to make a commit comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Enable alert commit comment
+          comment-on-alert: true
+          # Enable Job Summary for PRs
+          summary-always: true
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          auto-push: true
+      # Upload the updated cache file for the next job by actions/cache
