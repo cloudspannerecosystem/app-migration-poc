@@ -302,6 +302,25 @@ class AccuracyEvaluator:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--github-benchmark-data-file",
+        help="Where to write GitHub-formatted results data")
+    args = parser.parse_args()
+
     eval = AccuracyEvaluator("api_key")
     result = asyncio.run(eval.evaluate_accuracy("test_dataset.json"))
+
+    if args.github_benchmark_data_file:
+        with open(args.github_benchmark_data_file, "w") as output_file:
+            json.dump([
+                {
+                    "name": "Overall Eval Result",
+                    "unit": "Accuracy (percent)",
+                    "value": result * 100,
+                    #"range": "3",  # Variance (not currently computed)
+                    #"extra": "[optional tooltip]"
+                },
+            ], output_file)
+
     print("Accuracy: {}%".format(result * 100))
