@@ -15,12 +15,12 @@ import sys
 import os
 import pathlib
 #ToDo:Create a module
-# Assume all files are relative to this script's *containing* dir
-os.chdir(pathlib.Path(__file__).parent.resolve())
+BASE_DIR=pathlib.Path(__file__).parent
 # Set PYTHONPATH to include the *parent* of our containing dir
 sys.path.append(
-    os.path.abspath(pathlib.Path(__file__).parent.parent.resolve())
+    os.path.abspath(BASE_DIR.parent.resolve())
 )
+import argparse
 import asyncio
 import json
 import time
@@ -186,7 +186,7 @@ class AccuracyEvaluator:
         return response
 
     async def evaluate_accuracy(
-        self, test_file: str = "test_dataset.json", batch_size=3
+        self, test_file: str = (BASE_DIR/"test_dataset.json").resolve(), batch_size=3
     ):
         logger.info("Starting generating recommendations...")
         start_time = time.time()
