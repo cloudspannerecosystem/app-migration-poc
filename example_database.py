@@ -23,16 +23,19 @@ from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 vertexai.init()
 
+import pathlib
+BASE_DIR = pathlib.Path(__file__).parent
+
 
 class ExampleDb:
 
     @classmethod
     def CodeExampleDb(cls):
-        return cls(examples_file="code_examples_embedded.json")
+        return cls(examples_file=(BASE_DIR/"code_examples_embedded.json").resolve())
 
     @classmethod
     def ConceptExampleDb(cls):
-        return cls(examples_file="concept_examples_embedded.json")
+        return cls(examples_file=(BASE_DIR/"concept_examples_embedded.json").resolve())
 
     def __init__(self, examples_file: str):
         self._examples_file = examples_file
@@ -66,48 +69,55 @@ class ExampleDb:
             np.array(embedding.values, dtype=np.float32) for embedding in embeddings
         ]
 
-    def search(
-        self, search_terms: str | List[str], distance: float = 0.25, top_k: int = 10
-    ) -> Dict[int, float | str]:
-        target_similarity = 1 - distance
+    def search(self,
+               search_terms: str|List[str],
+               distance: float = 0.25,
+               top_k: int = 10
+              ) -> Dict[int, float|str]:
+      if not search_terms:
+        # If no input, shirt-circuit and return no output.
+        # (The code below assumes at least one input term to search for.)
+        return {}
 
-        if isinstance(search_terms, str):
-            # Heuristic for breaking up big string blocks
-            search_terms = [x for x in search_terms.split("\n\n") if x.strip()]
+      target_similarity = 1 - distance
 
-        search_embeddings = self._embed_search_terms(search_terms)
+      if isinstance(search_terms, str):
+          # Heuristic for breaking up big string blocks
+          search_terms = [x for x in search_terms.split("\n\n") if x.strip()]
 
-        results_filtered_list = []
-        for record in self._data.values():
-            example_embedding = record["example_embedding"]
-            similarity = max(
-                [
-                    float(
-                        cosine_similarity([search_embedding], [example_embedding])[0, 0]
-                    )
-                    for search_embedding in search_embeddings
-                ]
-            )
-            if similarity >= target_similarity:
-                results_filtered_list.append((similarity, record["id"]))
+      search_embeddings = self._embed_search_terms(search_terms)
 
-        results_topk = sorted(results_filtered_list, reverse=True)[:top_k]
+      results_filtered_list = []
+      for record in self._data.values():
+          example_embedding = record["example_embedding"]
+          similarity = max(
+              [
+                  float(
+                      cosine_similarity([search_embedding], [example_embedding])[0, 0]
+                  )
+                  for search_embedding in search_embeddings
+              ]
+          )
+          if similarity >= target_similarity:
+              results_filtered_list.append((similarity, record["id"]))
 
-        results = OrderedDict(
-            [
-                (
-                    id_,
-                    {
-                        "distance": 1 - similarity,
-                        "example": self._data[id_]["example"],
-                        "rewrite": self._data[id_]["rewrite"],
-                    },
-                )
-                for similarity, id_ in results_topk
-            ]
-        )
+      results_topk = sorted(results_filtered_list, reverse=True)[:top_k]
 
-        return results
+      results = OrderedDict(
+          [
+              (
+                  id_,
+                  {
+                      "distance": 1 - similarity,
+                      "example": self._data[id_]["example"],
+                      "rewrite": self._data[id_]["rewrite"],
+                  },
+              )
+              for similarity, id_ in results_topk
+          ]
+      )
+
+      return results
 
 
 if __name__ == "__main__":

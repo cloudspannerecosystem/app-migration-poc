@@ -74,8 +74,8 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 
 <div class="heading-container">
     <div class="image-container">
-        <img src="/usr/local/google/home/gauravpurohit/ai/app-migration-poc/result/gcp.png" alt="Google Cloud Logo">
-        <img src="/usr/local/google/home/gauravpurohit/ai/app-migration-poc/result/spanner.png" alt="Google Cloud Spanner Logo">
+        <img src="{{ filedata.gcp_logo }}" alt="Google Cloud Logo">
+        <img src="{{ filedata.spanner_logo }}" alt="Google Cloud Spanner Logo">
     </div>
     <h1>{{ report_data.appName }} Migration from MySQL to Google Cloud Spanner</h1>
 </div>
@@ -114,7 +114,7 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 
 <section>
 <h2>Code Impact</h2>
-Out of {{ app_data.files|length }} files, only the following {{ report_data.codeImpact|length }}
+Out of {{ app_data.files|length }} files, only the following {{ file_analyses|length }}
 are impacted by the migration to Spanner:
 
 <div>
@@ -129,7 +129,7 @@ are impacted by the migration to Spanner:
 <script type="text/javascript">
   google.charts.load("current", {packages:["corechart"]});
   google.charts.setOnLoadCallback(drawChart);
-  
+
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['Complexity Type', 'Lines of Code'],
@@ -154,8 +154,8 @@ are impacted by the migration to Spanner:
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['File', 'Number of Files'],
-      ['Files for Modification',  parseInt({{ report_data.codeImpact|length }})], 
-      ['Files Unchanged', parseInt({{ app_data.files|length }}) - parseInt({{ report_data.codeImpact|length }})], 
+      ['Files for Modification',  parseInt({{ report_data.codeImpact|length }})],
+      ['Files Unchanged', parseInt({{ app_data.files|length }}) - parseInt({{ report_data.codeImpact|length }})],
     ]);
 
     var options = {
@@ -174,8 +174,8 @@ are impacted by the migration to Spanner:
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['Code', 'Lines of Code'],
-      ['Code for Modification', parseInt({{ report_data.numberOfLines }})], 
-      ['Unchanged Code', {{ app_data.linesOfCode - report_data.numberOfLines|int }}], 
+      ['Code for Modification', parseInt({{ report_data.numberOfLines }})],
+      ['Unchanged Code', {{ app_data.linesOfCode - report_data.numberOfLines|int }}],
     ]);
 
     var options = {
@@ -206,9 +206,9 @@ are impacted by the migration to Spanner:
   const labels = {{ file_analyses.keys()|list|tojson }};
   const shortlabels = labels.map((x) => x.split("/").pop());
 
-  const complex_changes_counts = [{% for file in file_analyses.values() %}{{ file.COMPLEX|length}}, {% endfor %}];
-  const moderate_changes_counts = [{% for file in file_analyses.values() %}{{ file.MODERATE|length}}, {% endfor %}];
-  const simple_changes_counts = [{% for file in file_analyses.values() %}{{ file.SIMPLE|length}}, {% endfor %}];
+  const complex_changes_counts = [{% for filename, file in file_analyses.items() %}{{ file.COMPLEX|length}}, {% endfor %}];
+  const moderate_changes_counts = [{% for filename, file in file_analyses.items() %}{{ file.MODERATE|length}}, {% endfor %}];
+  const simple_changes_counts = [{% for filename, file in file_analyses.items() %}{{ file.SIMPLE|length}}, {% endfor %}];
 
   new Chart(ctx, {
     type: 'bar',
@@ -273,7 +273,7 @@ are impacted by the migration to Spanner:
           title: '{{ effort_type }} Task',
           hAxis: {title: 'Number of Code Lines'},
           vAxis: {title: 'Task Name'},
-          explorer: { 
+          explorer: {
             actions: ['dragToZoom', 'rightClickToReset'],
             axis: 'horizontal',
             keepInBounds: true
@@ -286,7 +286,7 @@ are impacted by the migration to Spanner:
     </script>
     <div id="chart_div_{{ loop.index }}" style="width: 900px; height: 500px;"></div>
 
-    
+
     <table>
         <thead>
             <tr>

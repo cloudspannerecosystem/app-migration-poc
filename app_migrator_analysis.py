@@ -28,6 +28,8 @@ from langchain_google_vertexai import (HarmBlockThreshold, HarmCategory,
 
 from dependency_analyzer.java_analyze import JavaAnalyzer
 from example_database import ExampleDb
+import base64
+import mimetypes
 from logger_config import setup_logger
 from utils import (is_dao_class, list_files,  # type: ignore
                    parse_json_with_retries, replace_and_save_html)
@@ -62,6 +64,15 @@ class MethodSignatureChange:
     new_signature: str
     explanation: str
 
+def fileToDataUrl(filename: str, mimetype: str = None) -> str:
+    if not mimetype:
+        mimetype, _encoding = mimetypes.guess_type(filename)
+    if not isinstance(mimetype, str):
+        raise IOError(f"Unknown MIME type for {filename}: {mimetype}")
+
+    with open(filename, "rb") as f:
+        filedata = base64.b64encode(f.read()).decode('ascii')
+        return f"data:{mimetype};base64,{filedata}"
 
 class MigrationSummarizer:
     def __init__(
@@ -99,13 +110,13 @@ class MigrationSummarizer:
         self, original_prompt, source_code, older_schema, new_schema, identifier: str
     ):
         prompt = f"""
-            You are a Cloud Spanner expert tasked with migrating an application from MySQL JDBC to Spanner-JDBC. 
+            You are a Cloud Spanner expert tasked with migrating an application from MySQL JDBC to Spanner-JDBC.
 
-            Analyze the provided code, old MySQL schema, and new Spanner schema. The schemas may be extensive as they represent the full database, 
+            Analyze the provided code, old MySQL schema, and new Spanner schema. The schemas may be extensive as they represent the full database,
             so focus your analysis on the DDL statements relevant to the provided code snippet. Identify areas where the application logic needs to be adapted
-            for Spanner and formulate specific questions requiring human expertise. 
-            
-            Only ask crisp and concise questions where you need actual guidance, human input, or assistance with complex functionalities. Focus on practical challenges and 
+            for Spanner and formulate specific questions requiring human expertise.
+
+            Only ask crisp and concise questions where you need actual guidance, human input, or assistance with complex functionalities. Focus on practical challenges and
             differences between MySQL and Spanner JDBC, such as:
             * How specific MySQL features or queries can be replicated in Spanner.
             * Workarounds for unsupported MySQL features in Spanner.
@@ -148,7 +159,7 @@ class MigrationSummarizer:
             relevant_records = self._context_example_db.search(question, 0.25, 2)
             concept_search_results.append(relevant_records.values())
 
-            if len(relevant_records.values) > 0:
+            if relevant_records:
                 answers_present = True
 
         question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
@@ -392,11 +403,12 @@ class MigrationSummarizer:
                     ```
                     {rewrite}
                     ```
-                    """
-            )
-            examples = [example_prompt.format(**record) for record in relevant_records]
-            examples_prompt_template = dedent(
-                """
+                    """)
+            examples = [
+                example_prompt.format(**record)
+                for record in relevant_records.values()
+            ]
+            examples_prompt_template = dedent("""
             The following are examples of how to rewrite code for Spanner.
 
             {examples}
@@ -405,7 +417,7 @@ class MigrationSummarizer:
             examples_prompt = examples_prompt_template.format(examples=examples)
 
         prompt = f"""
-            You are a Cloud Spanner expert tasked with migrating a DAO class from MySQL JDBC to Spanner JDBC. 
+            You are a Cloud Spanner expert tasked with migrating a DAO class from MySQL JDBC to Spanner JDBC.
 
             **Objective:**
             Analyze the provided Java DAO code and identify the necessary modifications for compatibility with Cloud Spanner. The code may include comments, blank lines, and other non-executable elements. Use function documentation and comments to understand the code's purpose, particularly how it interacts with the database.
@@ -436,7 +448,7 @@ class MigrationSummarizer:
             }},
             ...
             ]
-            ```          
+            ```
 
             **Format for `method_signature_changes`:**
             ```json
@@ -712,6 +724,9 @@ class MigrationSummarizer:
 
         logger.info(report_data)
 
+        gcp_logo_data = fileToDataUrl("result/gcp.png")
+        spanner_logo_data = fileToDataUrl("result/spanner.png")
+
         replace_and_save_html(
             "result/migration_template.html",
             output_file,
@@ -719,6 +734,10 @@ class MigrationSummarizer:
                 "report_data": report_data,
                 "app_data": app_data,
                 "file_analyses": file_analyses,
+                "filedata": {
+                    "gcp_logo": gcp_logo_data,
+                    "spanner_logo": spanner_logo_data,
+                }
             },
         )
 
@@ -754,7 +773,7 @@ class MigrationSummarizer:
         {code_changes}
 
         **Steps:**
-        1. Analyze the code_changes w.r.t to the task. 
+        1. Analyze the code_changes w.r.t to the task.
         2. Generate the output, make sure to use DELIMITER_CODE_START & DELIMITER_CODE_END with codeDiff.
         3. Check if count of DELIMITER_CODE_START and DELIMITER_CODE_END is equal. If not then go back to step2.
 
@@ -771,7 +790,7 @@ class MigrationSummarizer:
                 "exampleCodeChanges": [
                 {{
                 "description": "[Brief change description]",
-                "codeDiff": "DELIMITER_CODE_START@GIT_PATCH_FORMAT_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END", 
+                "codeDiff": "DELIMITER_CODE_START@GIT_PATCH_FORMAT_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END",
                 "similarChangeLocations": [ /* List of files with similar changes. File Names should be relative with the project. Use it wisely
                 and only if out of all the affected files, the changes is needed in few. */ ]
                 }}
@@ -843,7 +862,7 @@ class MigrationSummarizer:
             *  `description`: A description of the change.
             *  `start_line`: Starting line number of the affected code w.r.t original code contains non executable section.
             *  `end_line`: Ending line number of the affected code w.r.t original code contains non executable section.
-            
+
             **Here is the JSON array containing the code changes:**
             ```json
             {summaries_dictionary}
@@ -869,7 +888,7 @@ class MigrationSummarizer:
             "additionalNotes": "[Any other observations]",
             "migrationComplexity": "[Brief Summary of migration complexity with impact]",
             "codeImpact": [
-            /* List of affected files extracted from the code changes. File Names should be relative with the project. */ 
+            /* List of affected files extracted from the code changes. File Names should be relative with the project. */
                'file1',
                'file2',
                 // ... more files
@@ -931,8 +950,8 @@ class MigrationSummarizer:
                 For each change, ask yourself, "Is this change falling into this category?" and assign it to the most appropriate one by using field `id`.
                 Ensure that each code change is assigned to only one category.
 
-            3. **Verify Results: ** Iterate on categories and verify whether the mappings are coorect.. If not repeat the step 2. 
-            
+            3. **Verify Results: ** Iterate on categories and verify whether the mappings are coorect.. If not repeat the step 2.
+
             **Here is the JSON array containing the code changes:**
             ```json
             {summaries_dictionary}
@@ -944,7 +963,7 @@ class MigrationSummarizer:
             3. Make the categories are generic and not tied to business logic in the code.
             4. If some JSON objects in the input suggests no changes, then omit it from the output.
             5. Consider the following factors when evaluating effort of a task: number of places or components that require modification & time take to understand and make the change. Categorize the effort as 'Minor,' 'Moderate,' or 'Major' based on the extent of the required changes."
-            6. Categories of task should be unique. 
+            6. Categories of task should be unique.
             7. Consider the following factors when evaluating complexity of task: difficulty of implementation, level of technical expertise required, and the clarity of the requirements. Classify the complexity as SIMPLE, MODERATE, COMPLEX.
 
             Total number of records are {records}.
@@ -979,6 +998,13 @@ class MigrationSummarizer:
         response = await parse_json_with_retries(
             self._llm, prompt, response, 4, "summarize_report_tasks"
         )
+
+        affected_files = set(response.get('codeImpact', set()))
+
+        file_analyses = defaultdict(lambda: defaultdict(list))
+        for analysis in summaries_dictionary:
+            if analysis['filename'] in affected_files:
+                file_analyses[analysis['filename']][analysis['complexity']].append(analysis)
 
         # Define a custom sort order for effort
         effort_order = {"Major": 1, "Moderate": 2, "Minor": 3}
