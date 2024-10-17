@@ -122,10 +122,18 @@ class MigrationSummarizer:
             * Workarounds for unsupported MySQL features in Spanner.
             * Necessary code changes due to schema differences.
 
+            
+            **Instructions**
+            * Keep your questions general and focused on Spanner functionality, avoiding application-specific details.
+            * Ensure each question is unique and hasn't been asked before.
+
             **Example questions:**
 
             * "MySQL handles X this way... how can we achieve the same result in Spanner?"
             * "Feature Y is not supported in Spanner... what are the alternative approaches?"
+
+            **Tips**
+            * For large-scale deletes, Partitioned DML is more efficient than traditional DML.
 
             **Input:**
 
@@ -150,27 +158,31 @@ class MigrationSummarizer:
             self._llm_flash, prompt, content, 2, "analysis-ask-questions"
         )
 
-        questions = content["questions"]
-
-        concept_search_results = []
-        answers_present = False
-
-        for question in questions:
-            relevant_records = self._context_example_db.search(question, 0.25, 2)
-            concept_search_results.append(relevant_records.values())
-
-            if relevant_records:
-                answers_present = True
-
-        question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
-            questions, concept_search_results
-        )
-
-        logger.info("Question with Answer Prompt: %s", question_with_answer_prompt)
-
         final_prompt = original_prompt
-        if answers_present:
-            final_prompt = original_prompt + "\n" + question_with_answer_prompt
+
+        if content and content['questions'] is not None:
+            questions = content["questions"]
+
+            concept_search_results = []
+            answers_present = False
+
+            for question in questions:
+                relevant_records = self._context_example_db.search(question, 0.25, 2)
+                concept_search_results.append(relevant_records.values())
+
+                if relevant_records:
+                    answers_present = True
+            
+            logger.info("Identifier: %s \n Questions: %s", identifier, questions)
+
+            question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
+                questions, concept_search_results
+            )
+
+            logger.info("Identifier: %s \n Question with Answer Prompt: %s", identifier, question_with_answer_prompt)
+
+            if answers_present:
+                final_prompt = original_prompt + "\n" + question_with_answer_prompt
 
         content = await self._llm.ainvoke(final_prompt)
         content = await parse_json_with_retries(
@@ -198,7 +210,7 @@ class MigrationSummarizer:
             if len(search_results[i]):
                 formatted_string += f"* **Question {i+1}:** {question}\n"
                 for j, result in enumerate(search_results[i]):
-                    formatted_string += f"    * **Search Result {j+1}:** {result}\n"
+                    formatted_string += f"    * **Search Result {j+1}:** {result['rewrite']}\n"
                     formatted_string += "\n"
 
         return formatted_string
