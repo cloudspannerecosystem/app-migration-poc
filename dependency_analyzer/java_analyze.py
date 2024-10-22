@@ -100,8 +100,10 @@ class JavaAnalyzer:
 
         print(f"Analyzing project directory: {project_dir}")
         for root, dirs, files in os.walk(project_dir):
+            # Skipping the test, target, build and hidden folders
             dirs[:] = [
-                d for d in dirs if not (d.startswith(".") or d.startswith("test"))
+                d for d in dirs if not (d.startswith(".") or d.startswith("test")
+                                        or d.startswith("target") or d.startswith("build"))
             ]
 
             for file in files:
