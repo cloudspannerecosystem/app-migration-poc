@@ -58,7 +58,7 @@ class CodeDescriptionEvaluator:
     def get_code_embedding(self, code_snippet):
         """Generate embeddings for code snippets."""
         inputs = self.code_tokenizer(
-            code_snippet, return_tensors="pt", truncation=True, padding=True
+            code_snippet, return_tensors="pt", truncation=True, max_length=64, padding=True
         )
         with torch.no_grad():
             outputs = self.code_model(**inputs)
@@ -68,7 +68,7 @@ class CodeDescriptionEvaluator:
     def get_desc_embedding(self, description):
         """Generate embeddings for descriptions."""
         inputs = self.desc_tokenizer(
-            description, return_tensors="pt", truncation=True, padding=True
+            description, return_tensors="pt", truncation=True, max_length=64, padding=True
         )
         with torch.no_grad():
             outputs = self.desc_model(**inputs)
@@ -303,6 +303,25 @@ class AccuracyEvaluator:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--github-benchmark-data-file",
+        help="Where to write GitHub-formatted results data")
+    args = parser.parse_args()
+
     eval = AccuracyEvaluator("api_key")
-    result = asyncio.run(eval.evaluate_accuracy(Path(__file__).parent / "test_dataset.json"))
+    result = asyncio.run(eval.evaluate_accuracy())
+
+    if args.github_benchmark_data_file:
+        with open(args.github_benchmark_data_file, "w") as output_file:
+            json.dump([
+                {
+                    "name": "Overall Eval Result",
+                    "unit": "Accuracy (percent)",
+                    "value": result * 100,
+                    #"range": "3",  # Variance (not currently computed)
+                    #"extra": "[optional tooltip]"
+                },
+            ], output_file)
+
     print("Accuracy: {}%".format(result * 100))

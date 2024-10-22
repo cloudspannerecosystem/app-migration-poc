@@ -2,7 +2,7 @@ langchain_google_genai
 dataclasses
 typing
 tree_sitter<0.23
-tree_sitter_java
+tree_sitter_java<0.23
 networkx
 ipykernel
 matplotlib
