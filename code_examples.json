@@ -23,5 +23,15 @@
     "id": 5,
     "example": "SELECT LAST_INSERT_ID()",
     "rewrite": "INSERT <...> RETURNING <table_id_column> /* Use a sequence with CREATE SEQUENCE for IDs.  Spanner no longer requires UUID-based PKs.  PKs and IDs can be of type INT. */"
+  },
+  {
+    "id": 6,
+    "example": "connection.setAutoCommit(false);",
+    "rewrite": "connection.setAutoCommit(false);  /* Spanner recommends disabling autocommit unless the transaction only consists of a single statement */"
+  },
+  {
+    "id": 7,
+    "example": "connection.commit();",
+    "rewrite": "connection.commit(); /* Spanner recommends explicitly creating and committing transactions.  If the transaction doesn't contain any DML, use a read-only transaction, and consider a stale-read transaction for performance. */"
   }
 ]
