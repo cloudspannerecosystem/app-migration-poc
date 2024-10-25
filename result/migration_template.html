@@ -67,7 +67,68 @@ pre code { display: block; padding: 10px; overflow-x: auto; } 
 .code-impact-charts {
   display: flex;
 }
+
+/* CSS for tab panels */
+/* Style the tab */
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
 </style>
+<script language="javascript">
+function openExample(evt, exampleName) {
+  // Declare all variables
+  var i, tabcontent, tablinks;
+
+  var tabPanel = evt.currentTarget.closest(".tabpanel");
+
+  // Get all elements with class="tabcontent" and hide them
+  tabcontent = tabPanel.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Get all elements with class="tablinks" and remove the class "active"
+  tablinks = tabPanel.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+
+  // Show the current tab, and add an "active" class to the button that opened the tab
+  tabPanel.getElementsByClassName(exampleName)[0].style.display = "block";
+  evt.currentTarget.className += " active";
+}
+</script>
 </head>
 <body>
 
@@ -337,7 +398,27 @@ are impacted by the migration to Spanner:
 {% for change in task.exampleCodeChanges %}
   <li>
     <p>{{ change.description }}</p>
-    <pre><code class="language-java language-diff">{{ change.codeDiff }}</code></pre>
+    <table>
+      <tr><td>
+        <h5>Original Code</h5>
+        <pre><code class="language-java">{{ change.originalCode }}</code></pre>
+      </td><td>
+        <h5>Example Modifications</h5>
+        <div class="tabpanel">
+          <div class="tab">
+            {% for example in change.codeExamples %}
+            <button class="tablinks" onclick="openExample(event, 'tab{{ loop.index }}')">Example {{ loop.index }}</button>
+            {% endfor %}
+          </div>
+
+          {% for example in change.codeExamples %}
+          <div class="tabcontent tab{{ loop.index }}">
+            <pre><code class="language-java">{{ example }}</code></pre>
+          </div>
+          {% endfor %}
+        </div>
+      </td></tr>
+    </table>
     {% if change.similarChangeLocations %}
       <p>Similar changes might be needed in:</p>
       <ul>
