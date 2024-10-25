@@ -22,7 +22,7 @@
   {
     "id": 5,
     "example": "SELECT LAST_INSERT_ID()",
-    "rewrite": "INSERT <...> RETURNING <table_id_column> /* Use a sequence with CREATE SEQUENCE for IDs.  Spanner no longer requires UUID-based PKs.  PKs and IDs can be of type INT. */"
+    "rewrite": "INSERT <...> THEN RETURN <table_id_column> /* Use a sequence with CREATE SEQUENCE for IDs.  Spanner no longer requires UUID-based PKs.  PKs and IDs can be of type INT. */"
   },
   {
     "id": 6,
