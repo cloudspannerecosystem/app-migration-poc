@@ -122,7 +122,7 @@ class MigrationSummarizer:
             * Workarounds for unsupported MySQL features in Spanner.
             * Necessary code changes due to schema differences.
 
-            
+
             **Instructions**
             * Keep your questions general and focused on Spanner functionality, avoiding application-specific details.
             * Ensure each question is unique and hasn't been asked before.
@@ -172,7 +172,7 @@ class MigrationSummarizer:
 
                 if relevant_records:
                     answers_present = True
-            
+
             logger.info("Identifier: %s \n Questions: %s", identifier, questions)
 
             question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
@@ -786,11 +786,12 @@ class MigrationSummarizer:
 
         **Steps:**
         1. Analyze the code_changes w.r.t to the task.
-        2. Generate the output, make sure to use DELIMITER_CODE_START & DELIMITER_CODE_END with codeDiff.
-        3. Check if count of DELIMITER_CODE_START and DELIMITER_CODE_END is equal. If not then go back to step2.
+        2. Generate the output, make sure to use DELIMITER_CODE_START & DELIMITER_CODE_END with originalCode, codeDiff, and codeExamples.
+        3. Include code examples of how to implement the task.  Try to include at least two examples representing different ways of approaching the task.
+        4. Check if count of DELIMITER_CODE_START and DELIMITER_CODE_END is equal. If not then go back to step2.
 
         **Important Considerations:**
-        1. Use `DELIMITER_CODE_START` & `DELIMITER_CODE_END` for codeDiff.
+        1. Use `DELIMITER_CODE_START` & `DELIMITER_CODE_END` for originalCode, codeDiff, and codeExamples.
 
         Please generate a report section for this task in the following JSON format:
 
@@ -802,7 +803,13 @@ class MigrationSummarizer:
                 "exampleCodeChanges": [
                 {{
                 "description": "[Brief change description]",
-                "codeDiff": "DELIMITER_CODE_START@GIT_PATCH_FORMAT_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END",
+                "originalCode": "DELIMITER_CODE_START@ORIGINAL_SOURCE_CODE_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END",
+                "codeExamples": [
+                  "DELIMITER_CODE_START@REWRITTEN_EXAMPLE_CODE_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END",
+                  "DELIMITER_CODE_START@REWRITTEN_EXAMPLE_CODE_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END",
+                  "DELIMITER_CODE_START@REWRITTEN_EXAMPLE_CODE_IN_JSON_ESCAPED_STRING_WITH_PROPER_INDENTATION@DELIMITER_CODE_END",
+                  // ... more code examples if required
+                ],
                 "similarChangeLocations": [ /* List of files with similar changes. File Names should be relative with the project. Use it wisely
                 and only if out of all the affected files, the changes is needed in few. */ ]
                 }}
@@ -820,6 +827,15 @@ class MigrationSummarizer:
 
         final_results = []
 
+        def prune_code_delimeters(code: str):
+          return (
+              code
+              .removeprefix("DELIMITER_CODE_START@")
+              .removeprefix("DELIMITER_CODE_START")
+              .removesuffix("@DELIMITER_CODE_END")
+              .removesuffix("DELIMITER_CODE_END")
+            )
+
         async def process_task(task):
             """Processes a single task and generates its description."""
             logger.info("Processing Task: %s", task["category"])
@@ -835,6 +851,18 @@ class MigrationSummarizer:
                 "summarize_report_task_" + task["category"],
             )
             logger.info("Task processing completed")
+
+            # Clean up LLM helper artifacts
+            for codeChange in response["exampleCodeChanges"]:
+              codeChange["codeDiff"] = prune_code_delimeters(
+                codeChange.get("codeDiff", ""))
+              codeChange["originalCode"] = prune_code_delimeters(
+                codeChange.get("originalCode", ""))
+              codeChange["codeExamples"] = [
+                prune_code_delimeters(example)
+                for example in codeChange.get("codeExamples", [])
+              ]
+
             return response
 
         for i in range(0, len(report_tasks), batch_size):
@@ -881,10 +909,9 @@ class MigrationSummarizer:
             ```
 
             Instructions:
-            1. `codeDiff` should be a JSON-escaped string, ensuring proper handling of special characters.
-            2. All generated values within the report should be single-line strings.
-            3. Use backslashes to escape backticks, especially within code snippets.
-            4. Generate the output in the following JSON structure:
+            1. All generated values within the report should be single-line strings.
+            2. Use backslashes to escape backticks, especially within code snippets.
+            3. Generate the output in the following JSON structure:
             ```json
             {{
             "appName": "[App Name]",
