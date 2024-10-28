@@ -6,38 +6,38 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+import os
+import pathlib
+
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
-import os
-import pathlib
-#ToDo:Create a module
-BASE_DIR=pathlib.Path(__file__).parent
+
+# ToDo:Create a module
+BASE_DIR = pathlib.Path(__file__).parent
 # Set PYTHONPATH to include the *parent* of our containing dir
-sys.path.append(
-    os.path.abspath(BASE_DIR.parent.resolve())
-)
+sys.path.append(os.path.abspath(BASE_DIR.parent.resolve()))
 import argparse
 import asyncio
+import itertools
 import json
 import time
 from dataclasses import asdict, dataclass
-from typing import (Any, Callable, Dict, Iterable, List, Optional, Tuple, Type,
-                    Union)
+from pathlib import Path
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 
+import pandas as pd
 import torch
-from langchain_google_vertexai import (HarmBlockThreshold, HarmCategory,
-                                       VertexAI)
+from langchain_google_vertexai import HarmBlockThreshold, HarmCategory, VertexAI
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import RobertaModel, RobertaTokenizer
 
 from app_migrator_analysis import MigrationSummarizer
 from logger_config import setup_logger
 from utils import parse_json_with_retries, preprocess_code  # type: ignore
-from pathlib import Path
 
 logger = setup_logger(__name__)
 
@@ -58,7 +58,11 @@ class CodeDescriptionEvaluator:
     def get_code_embedding(self, code_snippet):
         """Generate embeddings for code snippets."""
         inputs = self.code_tokenizer(
-            code_snippet, return_tensors="pt", truncation=True, max_length=64, padding=True
+            code_snippet,
+            return_tensors="pt",
+            truncation=True,
+            max_length=64,
+            padding=True,
         )
         with torch.no_grad():
             outputs = self.code_model(**inputs)
@@ -68,7 +72,11 @@ class CodeDescriptionEvaluator:
     def get_desc_embedding(self, description):
         """Generate embeddings for descriptions."""
         inputs = self.desc_tokenizer(
-            description, return_tensors="pt", truncation=True, max_length=64, padding=True
+            description,
+            return_tensors="pt",
+            truncation=True,
+            max_length=64,
+            padding=True,
         )
         with torch.no_grad():
             outputs = self.desc_model(**inputs)
@@ -187,7 +195,7 @@ class AccuracyEvaluator:
         return response
 
     async def evaluate_accuracy(
-        self, test_file: str = (BASE_DIR/"test_dataset.json").resolve(), batch_size=3
+        self, test_file: str = (BASE_DIR / "test_dataset.json").resolve(), batch_size=3
     ):
         logger.info("Starting generating recommendations...")
         start_time = time.time()
@@ -227,22 +235,35 @@ class AccuracyEvaluator:
 
         return self.calculate_accuracy(test_cases, final_results)
 
-    def calculate_accuracy(self, ground_truth_list, generated_list, code_threshold=0.8, description_threshold=0.6):
+    def calculate_accuracy(
+        self,
+        test_cases_list,
+        generated_list,
+        code_threshold=0.8,
+        description_threshold=0.6,
+    ):
         """Evaluate the accuracy of generated descriptions and codes against ground truth."""
         correct_count = 0
-        total_count = len(ground_truth_list)
+        total_count = len(test_cases_list)
 
-        for ground_truth, generated in zip(ground_truth_list, generated_list):
-            logger.info ('\n')
-            logger.info ('\n')
-            logger.info ('\n')
-            logger.info ('\n')
-            logger.info ('\n')
-            logger.info ('\n')
-            gt_code, gt_desc = (
-                ground_truth.ground_truth_solution,
-                ground_truth.description,
+        data = []
+        for test_case, generated in zip(test_cases_list, generated_list):
+            (
+                functionality,
+                source_code,
+                mysql_schema,
+                spanner_schema,
+                gt_code,
+                gt_desc,
+            ) = (
+                test_case.functionality,
+                test_case.source_code,
+                test_case.mysql_schema,
+                test_case.spanner_schema,
+                test_case.ground_truth_solution,
+                test_case.description,
             )
+
             gen_code, gen_desc = generated["converted_code"], generated["description"]
 
             # Generate embeddings and compare for code
@@ -275,15 +296,53 @@ class AccuracyEvaluator:
             )
 
             logger.info(
-                f"Test: {ground_truth.functionality} Code Similarity: {code_similarity:.4f} | Description Similarity: {desc_similarity:.4f}"
+                f"Test: {test_case.functionality} Code Similarity: {code_similarity:.4f} | Description Similarity: {desc_similarity:.4f}"
             )
 
             # Check if both code and description similarities exceed the threshold
-            if code_similarity >= code_threshold and desc_similarity >= description_threshold:
+            if (
+                code_similarity >= code_threshold
+                and desc_similarity >= description_threshold
+            ):
                 correct_count += 1
+
+            data.append(
+                (
+                    functionality,
+                    source_code,
+                    mysql_schema,
+                    spanner_schema,
+                    gt_code,
+                    gen_code,
+                    code_similarity,
+                    gt_desc,
+                    gen_desc,
+                    desc_similarity,
+                )
+            )
 
         # Calculate accuracy
         accuracy = correct_count / total_count if total_count > 0 else 0
+
+        # Convert list of tuples to DataFrame
+        data_frame = pd.DataFrame(
+            data,
+            columns=[
+                "Functionality",
+                "Source Code",
+                "My SQL Schema",
+                "Spanner Schema",
+                "Spanner Code",
+                "Predicted Spanner Code",
+                "Similarity Score",
+                "Description",
+                "Predicted Description",
+                "Similarity Score",
+            ],
+        )
+
+        data_frame.to_csv("output.csv", index=False)
+
         return accuracy
 
     def load_test_cases_from_file(filepath: str) -> List[TestCase]:
@@ -312,7 +371,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--github-benchmark-data-file",
-        help="Where to write GitHub-formatted results data")
+        help="Where to write GitHub-formatted results data",
+    )
     args = parser.parse_args()
 
     eval = AccuracyEvaluator("api_key")
@@ -320,13 +380,16 @@ if __name__ == "__main__":
 
     if args.github_benchmark_data_file:
         with open(args.github_benchmark_data_file, "w") as output_file:
-            json.dump([
-                {
-                    "name": "Overall Eval Result",
-                    "unit": "Accuracy (percent)",
-                    "value": result * 100,
-                    #"range": "3",  # Variance (not currently computed)
-                    #"extra": "[optional tooltip]"
-                },
-            ], output_file)
+            json.dump(
+                [
+                    {
+                        "name": "Overall Eval Result",
+                        "unit": "Accuracy (percent)",
+                        "value": result * 100,
+                        # "range": "3",  # Variance (not currently computed)
+                        # "extra": "[optional tooltip]"
+                    },
+                ],
+                output_file,
+            )
     print("Accuracy: {}%".format(result * 100))

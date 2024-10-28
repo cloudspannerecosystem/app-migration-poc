@@ -8,7 +8,12 @@ from app_migrator_analysis import MigrationSummarizer
 
 
 async def generate_migration_report(
-    source_directory, mysql_schema_file, spanner_schema_file, access_key, output_file, gemini_version
+    source_directory,
+    mysql_schema_file,
+    spanner_schema_file,
+    access_key,
+    output_file,
+    gemini_version,
 ):
     # Example implementation
 
@@ -23,7 +28,9 @@ async def generate_migration_report(
     summarizer = MigrationSummarizer(access_key, gemini_version)
 
     analysis_start_time = time.time()  # Start timing the analysis
-    summaries, files_metadata = await summarizer.analyze_project(source_directory, mysql_schema_file, spanner_schema_file)
+    summaries, files_metadata = await summarizer.analyze_project(
+        source_directory, mysql_schema_file, spanner_schema_file
+    )
     analysis_end_time = time.time()
     analysis_execution_time = analysis_end_time - analysis_start_time
 
@@ -67,6 +74,11 @@ if __name__ == "__main__":
 
     asyncio.run(
         generate_migration_report(
-            source_directory, mysql_schema_file, spanner_schema_file, access_key, output_file, gemini_version
+            source_directory,
+            mysql_schema_file,
+            spanner_schema_file,
+            access_key,
+            output_file,
+            gemini_version,
         )
     )

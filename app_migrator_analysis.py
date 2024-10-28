@@ -13,26 +13,28 @@
 # limitations under the License.
 
 import asyncio
+import base64
 import dataclasses
 import json
+import mimetypes
 import os
 import time
 from collections import defaultdict
 from textwrap import dedent
-from typing import (Any, Callable, Dict, Iterable, List, Optional, Tuple, Type,
-                    Union)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 import aiofiles
-from langchain_google_vertexai import (HarmBlockThreshold, HarmCategory,
-                                       VertexAI)
+from langchain_google_vertexai import HarmBlockThreshold, HarmCategory, VertexAI
 
 from dependency_analyzer.java_analyze import JavaAnalyzer
 from example_database import ExampleDb
-import base64
-import mimetypes
 from logger_config import setup_logger
-from utils import (is_dao_class, list_files,  # type: ignore
-                   parse_json_with_retries, replace_and_save_html)
+from utils import (
+    is_dao_class,
+    list_files,  # type: ignore
+    parse_json_with_retries,
+    replace_and_save_html,
+)
 
 # Setup logger for this module
 logger = setup_logger(__name__)
@@ -64,6 +66,7 @@ class MethodSignatureChange:
     new_signature: str
     explanation: str
 
+
 def fileToDataUrl(filename: str, mimetype: str = None) -> str:
     if not mimetype:
         mimetype, _encoding = mimetypes.guess_type(filename)
@@ -71,8 +74,9 @@ def fileToDataUrl(filename: str, mimetype: str = None) -> str:
         raise IOError(f"Unknown MIME type for {filename}: {mimetype}")
 
     with open(filename, "rb") as f:
-        filedata = base64.b64encode(f.read()).decode('ascii')
+        filedata = base64.b64encode(f.read()).decode("ascii")
         return f"data:{mimetype};base64,{filedata}"
+
 
 class MigrationSummarizer:
     def __init__(
@@ -160,7 +164,7 @@ class MigrationSummarizer:
 
         final_prompt = original_prompt
 
-        if content and content['questions'] is not None:
+        if content and content["questions"] is not None:
             questions = content["questions"]
 
             concept_search_results = []
@@ -175,11 +179,17 @@ class MigrationSummarizer:
 
             logger.info("Identifier: %s \n Questions: %s", identifier, questions)
 
-            question_with_answer_prompt = MigrationSummarizer.format_questions_and_results(
-                questions, concept_search_results
+            question_with_answer_prompt = (
+                MigrationSummarizer.format_questions_and_results(
+                    questions, concept_search_results
+                )
             )
 
-            logger.info("Identifier: %s \n Question with Answer Prompt: %s", identifier, question_with_answer_prompt)
+            logger.info(
+                "Identifier: %s \n Question with Answer Prompt: %s",
+                identifier,
+                question_with_answer_prompt,
+            )
 
             if answers_present:
                 final_prompt = original_prompt + "\n" + question_with_answer_prompt
@@ -210,7 +220,9 @@ class MigrationSummarizer:
             if len(search_results[i]):
                 formatted_string += f"* **Question {i+1}:** {question}\n"
                 for j, result in enumerate(search_results[i]):
-                    formatted_string += f"    * **Search Result {j+1}:** {result['rewrite']}\n"
+                    formatted_string += (
+                        f"    * **Search Result {j+1}:** {result['rewrite']}\n"
+                    )
                     formatted_string += "\n"
 
         return formatted_string
@@ -415,12 +427,13 @@ class MigrationSummarizer:
                     ```
                     {rewrite}
                     ```
-                    """)
+                    """
+            )
             examples = [
-                example_prompt.format(**record)
-                for record in relevant_records.values()
+                example_prompt.format(**record) for record in relevant_records.values()
             ]
-            examples_prompt_template = dedent("""
+            examples_prompt_template = dedent(
+                """
             The following are examples of how to rewrite code for Spanner.
 
             {examples}
@@ -749,7 +762,7 @@ class MigrationSummarizer:
                 "filedata": {
                     "gcp_logo": gcp_logo_data,
                     "spanner_logo": spanner_logo_data,
-                }
+                },
             },
         )
 
@@ -828,12 +841,11 @@ class MigrationSummarizer:
         final_results = []
 
         def prune_code_delimeters(code: str):
-          return (
-              code
-              .removeprefix("DELIMITER_CODE_START@")
-              .removeprefix("DELIMITER_CODE_START")
-              .removesuffix("@DELIMITER_CODE_END")
-              .removesuffix("DELIMITER_CODE_END")
+            return (
+                code.removeprefix("DELIMITER_CODE_START@")
+                .removeprefix("DELIMITER_CODE_START")
+                .removesuffix("@DELIMITER_CODE_END")
+                .removesuffix("DELIMITER_CODE_END")
             )
 
         async def process_task(task):
@@ -854,14 +866,16 @@ class MigrationSummarizer:
 
             # Clean up LLM helper artifacts
             for codeChange in response["exampleCodeChanges"]:
-              codeChange["codeDiff"] = prune_code_delimeters(
-                codeChange.get("codeDiff", ""))
-              codeChange["originalCode"] = prune_code_delimeters(
-                codeChange.get("originalCode", ""))
-              codeChange["codeExamples"] = [
-                prune_code_delimeters(example)
-                for example in codeChange.get("codeExamples", [])
-              ]
+                codeChange["codeDiff"] = prune_code_delimeters(
+                    codeChange.get("codeDiff", "")
+                )
+                codeChange["originalCode"] = prune_code_delimeters(
+                    codeChange.get("originalCode", "")
+                )
+                codeChange["codeExamples"] = [
+                    prune_code_delimeters(example)
+                    for example in codeChange.get("codeExamples", [])
+                ]
 
             return response
 
@@ -1038,12 +1052,14 @@ class MigrationSummarizer:
             self._llm, prompt, response, 4, "summarize_report_tasks"
         )
 
-        affected_files = set(response.get('codeImpact', set()))
+        affected_files = set(response.get("codeImpact", set()))
 
         file_analyses = defaultdict(lambda: defaultdict(list))
         for analysis in summaries_dictionary:
-            if analysis['filename'] in affected_files:
-                file_analyses[analysis['filename']][analysis['complexity']].append(analysis)
+            if analysis["filename"] in affected_files:
+                file_analyses[analysis["filename"]][analysis["complexity"]].append(
+                    analysis
+                )
 
         # Define a custom sort order for effort
         effort_order = {"Major": 1, "Moderate": 2, "Minor": 3}

@@ -17,8 +17,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import (Any, Callable, Dict, Iterable, List, Optional, Tuple, Type,
-                    Union)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 import javalang
 import jinja2
@@ -149,7 +148,8 @@ async def parse_json_with_retries(
                 e,
             )
             print(
-                f"Attempting to correct JSON parsing error for item {identifier} (attempt {i + 1}/{retries}): {e}", file=sys.stderr
+                f"Attempting to correct JSON parsing error for item {identifier} (attempt {i + 1}/{retries}): {e}",
+                file=sys.stderr,
             )
 
         response = await llm.ainvoke(

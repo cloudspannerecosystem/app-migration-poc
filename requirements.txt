@@ -17,3 +17,4 @@ javalang
 black
 isort
 pathlib
+pandas
