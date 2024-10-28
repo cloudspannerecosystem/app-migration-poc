@@ -234,8 +234,8 @@ are impacted by the migration to Spanner:
   function drawChart() {
     var data = google.visualization.arrayToDataTable([
       ['Code', 'Lines of Code'],
-      ['Code for Modification', parseInt({{ report_data.numberOfLines }})],
-      ['Unchanged Code', {{ app_data.linesOfCode - report_data.numberOfLines|int }}],
+      ['Code for Modification', parseInt({{ report_data.get("numberOfLines", "") }})],
+      ['Unchanged Code', {{ app_data.linesOfCode - report_data.get("numberOfLines", "0")|int }}],
     ]);
 
     var options = {
@@ -325,7 +325,7 @@ are impacted by the migration to Spanner:
         var data = google.visualization.arrayToDataTable([
           ['Task Name', 'Number of Code Lines'],
           {% for effort in efforts %}
-          ['{{ effort.category }}', parseInt({{ effort.numberOfLines }})] {% if not loop.last %}, {% endif %}
+          ['{{ effort.category }}', parseInt({{ effort.get("numberOfLines", "0") }})] {% if not loop.last %}, {% endif %}
           {% endfor %}
         ]);
 
@@ -391,6 +391,9 @@ are impacted by the migration to Spanner:
 {% for file in task.affectedFiles %}
 <li>{{ file }}</li>
 {% endfor %}
+{% if task.affectedFiles|length >= 25 %}
+<li>(...)</li>
+{% endif %}
 </ul>
 {% if task.exampleCodeChanges %}
 <h4>Example Code Changes:</h4>
