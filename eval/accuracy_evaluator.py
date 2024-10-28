@@ -227,12 +227,18 @@ class AccuracyEvaluator:
 
         return self.calculate_accuracy(test_cases, final_results)
 
-    def calculate_accuracy(self, ground_truth_list, generated_list, threshold=0.6):
+    def calculate_accuracy(self, ground_truth_list, generated_list, code_threshold=0.8, description_threshold=0.6):
         """Evaluate the accuracy of generated descriptions and codes against ground truth."""
         correct_count = 0
         total_count = len(ground_truth_list)
 
         for ground_truth, generated in zip(ground_truth_list, generated_list):
+            logger.info ('\n')
+            logger.info ('\n')
+            logger.info ('\n')
+            logger.info ('\n')
+            logger.info ('\n')
+            logger.info ('\n')
             gt_code, gt_desc = (
                 ground_truth.ground_truth_solution,
                 ground_truth.description,
@@ -273,7 +279,7 @@ class AccuracyEvaluator:
             )
 
             # Check if both code and description similarities exceed the threshold
-            if code_similarity >= threshold and desc_similarity >= threshold:
+            if code_similarity >= code_threshold and desc_similarity >= description_threshold:
                 correct_count += 1
 
         # Calculate accuracy
@@ -323,5 +329,4 @@ if __name__ == "__main__":
                     #"extra": "[optional tooltip]"
                 },
             ], output_file)
-
     print("Accuracy: {}%".format(result * 100))
