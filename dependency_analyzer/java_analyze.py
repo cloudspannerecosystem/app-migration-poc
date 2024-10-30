@@ -18,6 +18,10 @@ import networkx as nx  # type: ignore
 import tree_sitter  # type: ignore
 import tree_sitter_java as tsjava  # type: ignore
 
+# We need a deep recursion limit for some Java files.
+# Bump up from the default of 1_000.
+import sys
+sys.setrecursionlimit(10_000)
 
 class JavaAnalyzer:
     JAVA_LANGUAGE = tree_sitter.Language(tsjava.language())

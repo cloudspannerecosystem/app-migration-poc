@@ -38,5 +38,15 @@
     "id": 800,
     "example": "Adding timestamps to records",
     "rewrite": "If it's necessary to add the current timestamp (NOW()) to a record, the timestamp should be added using Spanner's COMMIT_TIMESTAMP mechanism.  If the affected timestamp column doesn't support commit timestamps, this should be noted in a code comment, and other alternative examples should also be provided, such as using the CURRENT_TIMESTAMP() SQL function."
+  },
+  {
+    "id": 900,
+    "example": "DML parameters",
+    "rewrite": "When generating JDBC, use JDBC's parameters syntax, specifically using question marks as placeholders for parameters:  INSERT INTO t (a, b) VALUES (?, ?)"
+  },
+  {
+    "id": 1000,
+    "example": "SELECT parameters",
+    "rewrite": "When generating JDBC, use JDBC's parameters syntax, specifically using question marks as placeholders for parameters:  SELECT data FROM table WHERE pk = ?"
   }
 ]

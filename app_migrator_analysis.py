@@ -39,6 +39,11 @@ from utils import (
 # Setup logger for this module
 logger = setup_logger(__name__)
 
+def safe_int(i: Any) -> int:
+    try:
+        return int(i)
+    except (ValueError, TypeError):
+        return -1
 
 @dataclasses.dataclass(frozen=True)
 class FileAnalysis:
@@ -298,8 +303,8 @@ class MigrationSummarizer:
                     FileAnalysis(
                         filename=filepath,
                         code_sample=mod.get("code_sample"),
-                        start_line=int(mod.get("start_line", "-1")),
-                        end_line=int(mod.get("end_line", "-1")),
+                        start_line=safe_int(mod.get("start_line", "-1")),
+                        end_line=safe_int(mod.get("end_line", "-1")),
                         suggested_change=mod.get("suggested_change"),
                         description=mod.get("description"),
                         complexity=mod.get("complexity"),
@@ -719,7 +724,7 @@ class MigrationSummarizer:
             (
                 k,
                 sum(
-                    int(item["numberOfLines"])
+                    safe_int(item["numberOfLines"])
                     for item in report_tasks["tasks"]
                     if item["complexity"] == k
                 ),
@@ -732,7 +737,7 @@ class MigrationSummarizer:
         report_data.update(report_overview)
         logger.info("%s", report_data)
         report_data["efforts"] = tasks_by_efforts
-        report_data["notes"] = report_tasks["misc_efforts"]
+        report_data["notes"] = report_tasks.get("misc_efforts", "")
 
         logger.info("%s", report_data)
         report_tasks_response = await self.__summarize_report_tasks_description(
@@ -940,12 +945,6 @@ class MigrationSummarizer:
             "ormsToolkits": "[ORMs or toolkits found]",
             "additionalNotes": "[Any other observations]",
             "migrationComplexity": "[Brief Summary of migration complexity with impact]",
-            "codeImpact": [
-            /* List of affected files extracted from the code changes. File Names should be relative with the project. */
-               'file1',
-               'file2',
-                // ... more files
-            ],
             "numberOfLines": "[total number of lines affected in source code, you can use `start_line` & `end_line` to find it out]",
             }}
             ```
@@ -1032,7 +1031,7 @@ class MigrationSummarizer:
                 "description": "[Executive-friendly description]",
                 "complexity": "[Complexity(eg: SIMPLE, MODERATE, COMPLEX)]",
                 "effort": "[Task Effort Required: Minor | Moderate | Major]",
-                "indexes": "[JSON objects ids from the original input JSON Array which are relevant for this category]",
+                "indexes": "[Up to the top 25 JSON objects ids from the original input JSON Array which are most relevant for this category.  Do not return more than 25 IDs.]",
                 "numberOfLines": "[Number of Total Lines Affected in Source Code]",
                 }},
                 // ... more tasks
@@ -1052,21 +1051,16 @@ class MigrationSummarizer:
             self._llm, prompt, response, 4, "summarize_report_tasks"
         )
 
-        affected_files = set(response.get("codeImpact", set()))
-
         file_analyses = defaultdict(lambda: defaultdict(list))
         for analysis in summaries_dictionary:
-            if analysis["filename"] in affected_files:
-                file_analyses[analysis["filename"]][analysis["complexity"]].append(
-                    analysis
-                )
+            file_analyses[analysis['filename']][analysis['complexity']].append(analysis)
 
         # Define a custom sort order for effort
         effort_order = {"Major": 1, "Moderate": 2, "Minor": 3}
 
         # Sort the data based on the effort field
         sorted_tasks = sorted(
-            response["tasks"], key=lambda x: effort_order.get(x["effort"], 4)
+            response.get("tasks", []), key=lambda x: effort_order.get(x["effort"], 4)
         )
 
         # Group the tasks by effort level

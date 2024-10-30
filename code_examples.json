@@ -33,5 +33,15 @@
     "id": 7,
     "example": "connection.commit();",
     "rewrite": "connection.commit(); /* Spanner recommends explicitly creating and committing transactions.  If the transaction doesn't contain any DML, use a read-only transaction, and consider a stale-read transaction for performance. */"
+  },
+  {
+    "id": 8,
+    "example": "boolean",
+    "rewrite": "boolean /* Spanner supports the boolean data type, existing code should continue to use it */"
+  },
+  {
+    "id": 9,
+    "example": "byte[]",
+    "rewrite": "byte[] /* Spanner supports byte arrays, existing code should continue to use them.  However, it only supports byte arrays up to 10mb.  Code that stores larger objects in the database should be updated to store the object in GCS and store the path to the object in Spanner. */"
   }
 ]

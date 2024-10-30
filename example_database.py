@@ -86,7 +86,26 @@ class ExampleDb:
             # Heuristic for breaking up big string blocks
             search_terms = [x for x in search_terms.split("\n\n") if x.strip()]
 
-        search_embeddings = self._embed_search_terms(search_terms)
+        size_gated_search_terms = []
+      for term in search_terms:
+          # A giant wall of text probably won't be a precise match to any one
+          # example in our repository of short examples.
+          ARBITRARY_SIZE_LIMIT = 4_096
+          while len(term) > ARBITRARY_SIZE_LIMIT:
+              size_gated_search_terms.append(term[:ARBITRARY_SIZE_LIMIT])
+              term = term[ARBITRARY_SIZE_LIMIT:]
+          size_gated_search_terms.append(term)
+
+      search_embeddings = []
+
+      # The textembedding model supports up to 20k tokens total per request.
+      # Limit the number of search strings that we pass in each API request
+      # to try to avoid hitting this token-count limit.
+      ARBITRARY_BATCH_SIZE = 100
+      for i in range(0, len(size_gated_search_terms), ARBITRARY_BATCH_SIZE):
+          search_terms_slice = size_gated_search_terms[
+              i : i+ARBITRARY_BATCH_SIZE]
+          search_embeddings += self._embed_search_terms(search_terms_slice)
 
         results_filtered_list = []
         for record in self._data.values():
