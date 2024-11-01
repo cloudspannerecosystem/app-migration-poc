@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728488309594,
+  "lastUpdate": 1730504736349,
   "repoUrl": "https://github.com/cloudspannerecosystem/app-migration-poc",
   "entries": {
     "Benchmark": [
@@ -24,6 +24,33 @@ window.BENCHMARK_DATA = {
           {
             "name": "Overall Eval Result",
             "value": 33.33333333333333,
+            "unit": "Accuracy (percent)"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "gauravpurohit",
+            "username": "gauravpurohit06",
+            "email": "gauravpurohit@google.com"
+          },
+          "committer": {
+            "name": "gauravpurohit",
+            "username": "gauravpurohit06",
+            "email": "gauravpurohit@google.com"
+          },
+          "id": "0fa682c7b3cb8ac52fff9c6aa88f87bb08612a52",
+          "message": "feat: Updating the concept examples and eval dataset.",
+          "timestamp": "2024-10-30T14:23:24Z",
+          "url": "https://github.com/cloudspannerecosystem/app-migration-poc/commit/0fa682c7b3cb8ac52fff9c6aa88f87bb08612a52"
+        },
+        "date": 1730504735113,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "Overall Eval Result",
+            "value": 54.166666666666664,
             "unit": "Accuracy (percent)"
           }
         ]
