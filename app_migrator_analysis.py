@@ -125,10 +125,12 @@ class MigrationSummarizer:
             * How specific MySQL features or queries can be replicated in Spanner.
             * Workarounds for unsupported MySQL features in Spanner.
             * Necessary code changes due to schema differences.
+            * Check for performance improvements and ask performance optimizations related questions as well.
 
 
             **Instructions**
             * Keep your questions general and focused on Spanner functionality, avoiding application-specific details.
+            * Also ask questions on performance optimizations and recommended approaches to work with spanner.
             * Ensure each question is unique and hasn't been asked before.
 
             **Example questions:**

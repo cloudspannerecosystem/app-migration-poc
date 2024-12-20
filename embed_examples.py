@@ -20,7 +20,7 @@ import vertexai
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 vertexai.init()
-Embeddings = List[Dict[str, int | str]]
+Embeddings = List[Dict[str, int | str | Dict]]
 
 
 def get_examples(examples_file: str) -> Embeddings:
@@ -50,14 +50,14 @@ def get_un_embedded_strings(
     strings = set()
 
     for record in examples_file:
-        strings.add(record["example"])
-        strings.add(record["rewrite"])
+        strings.add(str(record["example"]))
+        strings.add(str(record["rewrite"]))
 
     for record in output_file:
         if "example_embedding" in record and record["example"] in strings:
             strings.remove(record["example"])
-        if "rewrite_embedding" in record and record["rewrite"] in strings:
-            strings.remove(record["rewrite"])
+        if "rewrite_embedding" in record and str(record["rewrite"]) in strings:
+            strings.remove(str(record["rewrite"]))
 
     return strings
 
@@ -102,8 +102,8 @@ def generate_missing_embeddings(
     for record in newly_embedded:
         if record["example"] in embeddings:
             record["example_embedding"] = embeddings[record["example"]]
-        if record["rewrite"] in embeddings:
-            record["rewrite_embedding"] = embeddings[record["rewrite"]]
+        if str(record["rewrite"]) in embeddings:
+            record["rewrite_embedding"] = embeddings[str(record["rewrite"])]
 
     with open(output_file, "w") as f:
         json.dump(newly_embedded, f, indent=2)
