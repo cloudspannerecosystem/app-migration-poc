@@ -2,7 +2,7 @@
 
 # Check for at least 3 arguments
 if [ "$#" -lt 3 ]; then
-    echo "Usage: $0 <source_directory> <access_key_file> <output_file> [<gemini_version>]"
+    echo "Usage: $0 <source_directory> <mysql_schema_file> <spanner_schema_file> <access_key_file> <output_file> [<gemini_version>]"
     exit 1
 fi
 
