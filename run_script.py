@@ -70,7 +70,7 @@ if __name__ == "__main__":
     spanner_schema_file = sys.argv[3]
     access_key = sys.argv[4]
     output_file = sys.argv[5]
-    gemini_version = sys.argv[6] if len(sys.argv) >= 6 else "gemini-1.5-flash-001"
+    gemini_version = sys.argv[6] if len(sys.argv) > 6 else "gemini-1.5-flash-001"
 
     asyncio.run(
         generate_migration_report(

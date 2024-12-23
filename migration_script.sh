@@ -18,6 +18,7 @@ GEMINI_VERSION=${6:-gemini-1.5-pro-001}
 # We assume the script is in the same directory as the venv and our Python command
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+python3 -m venv .venv
 # Path to the virtual environment
 VENV_PATH="$SCRIPT_DIR/.venv"
 
@@ -34,6 +35,9 @@ fi
 
 # Activate the virtual environment
 source "$VENV_PATH/bin/activate"
+
+pip install -r requirements.txt
+python embed_examples.py
 
 # Invoke the Python script with the arguments
 python "$PYTHON_SCRIPT" "$SOURCE_DIRECTORY" "$MYSQL_SCHEMA_FILE" "$SPANNER_SCHEMA_FILE" "$ACCESS_KEY" "$OUTPUT_FILE" "$GEMINI_VERSION"
