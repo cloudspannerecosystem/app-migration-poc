@@ -12,6 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main provides a tool to analyze Go projects and generate a dependency graph between files.
+//
+// This tool uses the Go packages API to identify dependencies between files in a project by analyzing
+// symbol usage. It outputs a dependency graph in DOT format, which can be visualized using graph tools
+// like Graphviz.
+//
+// Example Usage:
+//
+// Suppose you have a Go project in the directory `/my-project`:
+//
+// ```
+// go run main.go -path /my-project
+// ```
+//
+// This will analyze the project and generate a `dependency_graph.dot` file in the current directory.
+// You can visualize the DOT file using a tool like Graphviz:
+//
+// ```
+// dot -Tpng dependency_graph.dot -o graph.png
+// ```
+//
+// The resulting PNG will show the dependency relationships between files in your project.
 package main
 
 import (
